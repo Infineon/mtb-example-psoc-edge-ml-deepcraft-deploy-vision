@@ -92,9 +92,13 @@ SOURCES+=
 MODEL_PREFIX=$(subst $\",,$(NN_MODEL_NAME))
 CY_IGNORE+=$(NN_MODEL_FOLDER)
 
-# Check which kit is being used
+# Check which kit is being used and apply the corresponding configurations
 ifeq (APP_KIT_PSE84_AI, $(TARGET))
 DEFINES+=USE_KIT_PSE84_AI
+else
+ifeq ($(filter APP_KIT_PSE84_EVAL_EPC2 APP_KIT_PSE84_EVAL_EPC4, $(TARGET)), $(TARGET))
+CY_IGNORE+=$(SEARCH_camera-dvp-ov7675)
+endif
 endif
 
 # Add additional defines to the build process (without a leading -D).
@@ -113,7 +117,7 @@ endif
 # Add define to build code for CM55 and include additional files
 ifeq (cm55, $(ML_IMAGIMOB_CPU))
 DEFINES+=ML_IMAGIMOB_CM55 MODEL_NAME=$(NN_MODEL_NAME) CY_ML_MODEL_MEM=.cy_socmem_data
-SOURCES += $(NN_MODEL_FOLDER)/mtb_ml_models/YOLOV5N_$(NN_INFERENCE_ENGINE)_model_$(NN_TYPE).c
+DEFINES+=CY_ML_ARENA_MEM=.cy_socmem_data
 endif
 
 # Depending which Neural Network Type, add a specific DEFINE and COMPONENT
@@ -131,6 +135,32 @@ CY_IGNORE+=$(SEARCH_cmsis)/COMPONENT_CMSIS_NN/Source/ConvolutionFunctions/arm_co
 CY_IGNORE+=$(SEARCH_cmsis)/COMPONENT_CMSIS_NN/Source/ConvolutionFunctions/arm_convolve_wrapper_s8.c
 CY_IGNORE+=$(SEARCH_cmsis)/COMPONENT_CMSIS_NN/Source/ConvolutionFunctions/arm_depthwise_conv_s8_opt.c
 CY_IGNORE+=$(SEARCH_cmsis)/COMPONENT_CMSIS_NN/Source/ConvolutionFunctions/arm_depthwise_conv_wrapper_s8.c
+
+# Camera type selection options
+# CAM_USB for USB Camera
+# CAM_DVP for DVP Camera
+CAMERA_TYPE = CAM_USB
+
+# Check which camera is being used
+ifeq (CAM_USB, $(CAMERA_TYPE))
+DEFINES+=USE_USB_CAM
+endif
+
+ifeq (CAM_DVP, $(CAMERA_TYPE))
+ifeq (APP_KIT_PSE84_AI, $(TARGET))
+DEFINES+=USE_DVP_CAM
+else
+$(error DVP_CAM is not supported for this kit)
+endif
+endif
+
+# RPS_DEMO_MODE = ENABLED if user wants LED indications for detections for default RPS model
+RPS_DEMO_MODE = DISABLED
+ifeq (APP_KIT_PSE84_AI, $(TARGET))
+ifeq (ENABLED, $(RPS_DEMO_MODE))
+DEFINES+=RPS_DEMO_MODE_ENABLED
+endif
+endif
 
 # Select softfp or hardfp floating point. Default is softfp.
 VFP_SELECT+= hardfp
@@ -155,10 +185,6 @@ ASFLAGS+=
 
 # Additional / custom linker flags.
 LDFLAGS+=
-
-# Additional / custom libraries to link in to the application.
-INCLUDES+=../object_detection_libraries/
-LDLIBS+=../object_detection_libraries/object_detection_lib.a
 
 # Path to the linker script to use (if empty, use the default linker script).
 LINKER_SCRIPT+=

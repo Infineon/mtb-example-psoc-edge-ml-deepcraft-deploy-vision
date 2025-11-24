@@ -7,33 +7,33 @@
  * Related Document : See README.md
  *
 ********************************************************************************
-* (c) 2025, Infineon Technologies AG, or an affiliate of Infineon
-* Technologies AG. All rights reserved.
-* This software, associated documentation and materials ("Software") is
-* owned by Infineon Technologies AG or one of its affiliates ("Infineon")
-* and is protected by and subject to worldwide patent protection, worldwide
-* copyright laws, and international treaty provisions. Therefore, you may use
-* this Software only as provided in the license agreement accompanying the
-* software package from which you obtained this Software. If no license
-* agreement applies, then any use, reproduction, modification, translation, or
-* compilation of this Software is prohibited without the express written
-* permission of Infineon.
-* 
-* Disclaimer: UNLESS OTHERWISE EXPRESSLY AGREED WITH INFINEON, THIS SOFTWARE
-* IS PROVIDED AS-IS, WITH NO WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
-* INCLUDING, BUT NOT LIMITED TO, ALL WARRANTIES OF NON-INFRINGEMENT OF
-* THIRD-PARTY RIGHTS AND IMPLIED WARRANTIES SUCH AS WARRANTIES OF FITNESS FOR A
-* SPECIFIC USE/PURPOSE OR MERCHANTABILITY.
-* Infineon reserves the right to make changes to the Software without notice.
-* You are responsible for properly designing, programming, and testing the
-* functionality and safety of your intended application of the Software, as
-* well as complying with any legal requirements related to its use. Infineon
-* does not guarantee that the Software will be free from intrusion, data theft
-* or loss, or other breaches ("Security Breaches"), and Infineon shall have
-* no liability arising out of any Security Breaches. Unless otherwise
-* explicitly approved by Infineon, the Software may not be used in any
-* application where a failure of the Product or any consequences of the use
-* thereof can reasonably be expected to result in personal injury.
+ * (c) 2025, Infineon Technologies AG, or an affiliate of Infineon
+ * Technologies AG. All rights reserved.
+ * This software, associated documentation and materials ("Software") is
+ * owned by Infineon Technologies AG or one of its affiliates ("Infineon")
+ * and is protected by and subject to worldwide patent protection, worldwide
+ * copyright laws, and international treaty provisions. Therefore, you may use
+ * this Software only as provided in the license agreement accompanying the
+ * software package from which you obtained this Software. If no license
+ * agreement applies, then any use, reproduction, modification, translation, or
+ * compilation of this Software is prohibited without the express written
+ * permission of Infineon.
+ *
+ * Disclaimer: UNLESS OTHERWISE EXPRESSLY AGREED WITH INFINEON, THIS SOFTWARE
+ * IS PROVIDED AS-IS, WITH NO WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+ * INCLUDING, BUT NOT LIMITED TO, ALL WARRANTIES OF NON-INFRINGEMENT OF
+ * THIRD-PARTY RIGHTS AND IMPLIED WARRANTIES SUCH AS WARRANTIES OF FITNESS FOR A
+ * SPECIFIC USE/PURPOSE OR MERCHANTABILITY.
+ * Infineon reserves the right to make changes to the Software without notice.
+ * You are responsible for properly designing, programming, and testing the
+ * functionality and safety of your intended application of the Software, as
+ * well as complying with any legal requirements related to its use. Infineon
+ * does not guarantee that the Software will be free from intrusion, data theft
+ * or loss, or other breaches ("Security Breaches"), and Infineon shall have
+ * no liability arising out of any Security Breaches. Unless otherwise
+ * explicitly approved by Infineon, the Software may not be used in any
+ * application where a failure of the Product or any consequences of the use
+ * thereof can reasonably be expected to result in personal injury.
 *******************************************************************************/
 
 /*******************************************************************************
@@ -46,12 +46,15 @@
 #include "cyabs_rtos_impl.h"
 #include "FreeRTOS.h"
 #include "task.h"
-#include "definitions.h"
-#include "object_detection_lib.h"
+#include "inference_task.h"
+#include "model.h"
 #include "lcd_task.h"
 #include "ifx_time_utils.h"
 #include "cycfg_qspi_memslot.h"
 #include "mtb_serial_memory.h"
+#ifdef USE_DVP_CAM
+#include "mtb_dvp_camera_ov7675.h"
+#endif
 
 /******************************************************************************
  * Macros
@@ -62,25 +65,35 @@
 
 #define GFX_TASK_NAME                       ( "CM55 Gfx Task" )
 #define GFX_TASK_STACK_SIZE                 ( 10U * 1024U )
-#define GFX_TASK_PRIORITY                   ( configMAX_PRIORITIES - 5 )  
+#define GFX_TASK_PRIORITY                   ( configMAX_PRIORITIES - 5 )
 
 #define USB_WEBCAM_TASK_NAME                ( "CM55 USB Webcam Task")
 #define USB_WEBCAM_TASK_STACK_SIZE          ( 20U * 1024U )
-#define USB_WEBCAM_TASK_PRIORITY            ( configMAX_PRIORITIES - 3 ) 
-
-#define INFERENCE_TASK_NAME                 ( "CM55 Inference Task" )
-#define INFERENCE_TASK_STACK_SIZE           ( 64U * 1024U )
-#define INFERENCE_TASK_PRIORITY             ( configMAX_PRIORITIES - 4)  
+#define USB_WEBCAM_TASK_PRIORITY            ( configMAX_PRIORITIES - 3 )
 
 /******************************************************************************
  * Global Variables
  ******************************************************************************/
+#ifdef USE_USB_CAM
 static cy_thread_t usb_webcam_thread;
-static cy_thread_t gfx_thread;
 static cy_thread_t inference_thread;
+#endif
+static cy_thread_t gfx_thread;
 static mtb_serial_memory_t serial_memory_obj;
 static cy_stc_smif_mem_context_t smif_mem_context;
 static cy_stc_smif_mem_info_t smif_mem_info;
+
+#ifdef USE_DVP_CAM
+/* double-buffered array to store image frames from the DVP camera, where one
+ * buffer is being displayed while the other is being filled with new data */
+vg_lite_buffer_t dvp_bgr565_frames[NUM_IMAGE_BUFFERS];
+/* flag to indicate whether a new frame is available for processing */
+bool frame_ready = false;
+/* flag to indicate which frame is currently being displayed or processed */
+bool active_frame = false;
+/* I2C master context for communication with the DVP camera */
+extern cy_stc_scb_i2c_context_t i2c_controller_context;
+#endif
 
 cy_semaphore_t model_semaphore;
 cy_semaphore_t usb_semaphore;
@@ -285,23 +298,23 @@ uint32_t get_run_time_counter_value(void)
 *******************************************************************************/
 uint32_t calculate_idle_percentage(void)
 {
-    static uint32_t previousIdleTime = 0;
-    static TickType_t previousTick = 0;
+    static uint32_t previous_idle_time = 0;
+    static TickType_t previous_tick = 0;
     uint32_t time_diff = 0;
     uint32_t idle_percent = 0;
 
-    uint32_t currentIdleTime = ulTaskGetIdleRunTimeCounter();
-    TickType_t currentTick = portGET_RUN_TIME_COUNTER_VALUE();
+    uint32_t current_idle_time = ulTaskGetIdleRunTimeCounter();
+    TickType_t current_tick = portGET_RUN_TIME_COUNTER_VALUE();
 
-    time_diff = currentTick - previousTick;
+    time_diff = current_tick - previous_tick;
 
-    if((currentIdleTime >= previousIdleTime) && (currentTick > previousTick))
+    if((current_idle_time >= previous_idle_time) && (current_tick > previous_tick))
     {
-        idle_percent = ((currentIdleTime - previousIdleTime) * 100)/time_diff;
+        idle_percent = ((current_idle_time - previous_idle_time) * 100)/time_diff;
     }
 
-    previousIdleTime = ulTaskGetIdleRunTimeCounter();
-    previousTick = portGET_RUN_TIME_COUNTER_VALUE();
+    previous_idle_time = ulTaskGetIdleRunTimeCounter();
+    previous_tick = portGET_RUN_TIME_COUNTER_VALUE();
 
     return idle_percent;
 }
@@ -330,7 +343,8 @@ int main ( void )
     /* Initialize the device and board peripherals */
     result = cybsp_init();
     if ( CY_RSLT_SUCCESS != result ) {
-        CY_ASSERT(0);       /* Board init failed. Stop program execution */
+        /* Board init failed. Stop program execution */
+        CY_ASSERT(0);       
     }
 
     /* Enable global interrupts */
@@ -359,14 +373,16 @@ int main ( void )
 
     /* \x1b[2J\x1b[;H - ANSI ESC sequence for clear screen */
     printf("\x1b[2J\x1b[;H");
-    printf("\r\n******************PSOC Edge MCU: DEEPCRAFT Deploy Vision******************\r\n");
+    printf("\r\n******************PSOC Edge MCU: Machine learning DEEPCRAFT deploy vision******************\r\n");
     printf("Build Version: %d.%d.%d\r\n", MAJOR_VERSION, MINOR_VERSION, PATCH_VERSION);
     printf("Build Date: %s\r\n", __DATE__);
     printf("Build Time: %s\r\n", __TIME__);
     printf("Following cameras are supported:\r\n");
     printf("1. HBVCAM OV7675 0.3MP Camera: https://www.hbvcamera.com/0-3mp-pixel-usb-cameras/hbvcam-ov7675-0.3mp-mini-laptop-camera-module.html\r\n");
     printf("2. Logitech C920 HD Pro Webcam: https://www.logitech.com/en-ch/shop/p/c920-pro-hd-webcam\r\n");
-    printf("3. HBVCAM OS02F10 2MP Camera: https://www.hbvcamera.com/2-mega-pixel-usb-cameras/2mp-1080p-auto-focus-hd-usb-camera-module-for-atm-machine.html\r\n");
+    printf("3. Logitech C920e Business Webcam: https://www.logitech.com/en-ch/products/webcams/c920e-business-webcam\r\n");
+    printf("4. HBVCAM OS02F10 2MP Camera: https://www.hbvcamera.com/2-mega-pixel-usb-cameras/2mp-1080p-auto-focus-hd-usb-camera-module-for-atm-machine.html\r\n");
+    printf("5. OV7675 0.3MP DVP Camera: https://blog.arducam.com/products/camera-breakout-board/0-3mp-ov7675\r\n");
     printf("\r\n*************************************************************************************\r\n");
 
     result = cy_rtos_semaphore_init(&usb_semaphore, NUM_IMAGE_BUFFERS, 0);
@@ -385,18 +401,33 @@ int main ( void )
         CY_ASSERT(0);
     }
 
+#ifdef USE_USB_CAM
     result = cy_rtos_thread_create( &inference_thread, &cm55_inference_task, INFERENCE_TASK_NAME, NULL,
                                     INFERENCE_TASK_STACK_SIZE, INFERENCE_TASK_PRIORITY, NULL);
     if ( CY_RSLT_SUCCESS != result ) {
         CY_ASSERT(0);
     }
 
+
     result = cy_rtos_thread_create( &usb_webcam_thread, &cm55_usb_webcam_task, USB_WEBCAM_TASK_NAME, NULL,
                                     USB_WEBCAM_TASK_STACK_SIZE, USB_WEBCAM_TASK_PRIORITY, NULL);
     if ( CY_RSLT_SUCCESS != result ) {
         CY_ASSERT(0);
     }
+#endif
 
+#ifdef USE_DVP_CAM
+    result = Cy_SCB_I2C_Init(CYBSP_I2C_CAM_CONTROLLER_HW, &CYBSP_I2C_CAM_CONTROLLER_config, &i2c_controller_context);
+    if (CY_SCB_I2C_SUCCESS != result)
+    {
+        printf("I2C Master PDL initialization failed !!\n");
+        CY_ASSERT(0);
+    }
+        /* Enable the I2C */
+    Cy_SCB_I2C_Enable(CYBSP_I2C_CAM_CONTROLLER_HW);
+
+    mtb_dvp_cam_ov7675_init(dvp_bgr565_frames, &i2c_controller_context, &frame_ready, &active_frame);
+#endif
     /* Start the RTOS Scheduler */
     vTaskStartScheduler();
 

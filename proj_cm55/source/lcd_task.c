@@ -6,33 +6,33 @@
 * Related Document: See README.md
 *
 ********************************************************************************
-* (c) 2025, Infineon Technologies AG, or an affiliate of Infineon
-* Technologies AG. All rights reserved.
-* This software, associated documentation and materials ("Software") is
-* owned by Infineon Technologies AG or one of its affiliates ("Infineon")
-* and is protected by and subject to worldwide patent protection, worldwide
-* copyright laws, and international treaty provisions. Therefore, you may use
-* this Software only as provided in the license agreement accompanying the
-* software package from which you obtained this Software. If no license
-* agreement applies, then any use, reproduction, modification, translation, or
-* compilation of this Software is prohibited without the express written
-* permission of Infineon.
-* 
-* Disclaimer: UNLESS OTHERWISE EXPRESSLY AGREED WITH INFINEON, THIS SOFTWARE
-* IS PROVIDED AS-IS, WITH NO WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
-* INCLUDING, BUT NOT LIMITED TO, ALL WARRANTIES OF NON-INFRINGEMENT OF
-* THIRD-PARTY RIGHTS AND IMPLIED WARRANTIES SUCH AS WARRANTIES OF FITNESS FOR A
-* SPECIFIC USE/PURPOSE OR MERCHANTABILITY.
-* Infineon reserves the right to make changes to the Software without notice.
-* You are responsible for properly designing, programming, and testing the
-* functionality and safety of your intended application of the Software, as
-* well as complying with any legal requirements related to its use. Infineon
-* does not guarantee that the Software will be free from intrusion, data theft
-* or loss, or other breaches ("Security Breaches"), and Infineon shall have
-* no liability arising out of any Security Breaches. Unless otherwise
-* explicitly approved by Infineon, the Software may not be used in any
-* application where a failure of the Product or any consequences of the use
-* thereof can reasonably be expected to result in personal injury.
+ * (c) 2025, Infineon Technologies AG, or an affiliate of Infineon
+ * Technologies AG. All rights reserved.
+ * This software, associated documentation and materials ("Software") is
+ * owned by Infineon Technologies AG or one of its affiliates ("Infineon")
+ * and is protected by and subject to worldwide patent protection, worldwide
+ * copyright laws, and international treaty provisions. Therefore, you may use
+ * this Software only as provided in the license agreement accompanying the
+ * software package from which you obtained this Software. If no license
+ * agreement applies, then any use, reproduction, modification, translation, or
+ * compilation of this Software is prohibited without the express written
+ * permission of Infineon.
+ *
+ * Disclaimer: UNLESS OTHERWISE EXPRESSLY AGREED WITH INFINEON, THIS SOFTWARE
+ * IS PROVIDED AS-IS, WITH NO WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+ * INCLUDING, BUT NOT LIMITED TO, ALL WARRANTIES OF NON-INFRINGEMENT OF
+ * THIRD-PARTY RIGHTS AND IMPLIED WARRANTIES SUCH AS WARRANTIES OF FITNESS FOR A
+ * SPECIFIC USE/PURPOSE OR MERCHANTABILITY.
+ * Infineon reserves the right to make changes to the Software without notice.
+ * You are responsible for properly designing, programming, and testing the
+ * functionality and safety of your intended application of the Software, as
+ * well as complying with any legal requirements related to its use. Infineon
+ * does not guarantee that the Software will be free from intrusion, data theft
+ * or loss, or other breaches ("Security Breaches"), and Infineon shall have
+ * no liability arising out of any Security Breaches. Unless otherwise
+ * explicitly approved by Infineon, the Software may not be used in any
+ * application where a failure of the Product or any consequences of the use
+ * thereof can reasonably be expected to result in personal injury.
 *******************************************************************************/
 
 /*******************************************************************************
@@ -46,7 +46,6 @@
 #include "FreeRTOS.h"
 #include "task.h"
 #include "FreeRTOSConfig.h"
-#include "definitions.h"
 #include "usb_camera_task.h"
 #include "lcd_task.h"
 #include "inference_task.h"
@@ -54,8 +53,6 @@
 #include "font_16x36.h"
 #include "ifx_image_utils.h"
 #include "ifx_time_utils.h"
-#include "object_detection_structs.h"
-#include "model_info.h" /*import CLASS_STRING_LIST and its values*/ 
 #include "lcd_graphics.h"
 
 #if defined(MTB_SHARED_MEM)
@@ -65,7 +62,6 @@
 /*******************************************************************************
  * Macros
  *******************************************************************************/
-#define GFX_TASK_DELAY_MS                   (30U)
 #define I2C_CONTROLLER_IRQ_PRIORITY         (4U)
 
 #define GPU_INT_PRIORITY                    (3U)
@@ -87,33 +83,20 @@
                                              ((CAMERA_BUFFER_SIZE) * (NUM_IMAGE_BUFFERS + 1)))
 
 #define GPU_MEM_BASE                        (0x0U)
-#define TICK_VAL                            (1U)
 
 #define WHITE_COLOR                         (0x00FFFFFFU)
 #define BLACK_COLOR                         (0x00000000U)
 #define TARGET_NUM_FRAMES                   (15U)
 
-#define RESET_VAL                           (0U)
-
-#define OUTER_BOX_X_POS                     (0)
-#define OUTER_BOX_Y_POS                     (0)
-#define OUTER_BOX_HIGHT                     (512)
-#define OUTER_BOX_WIDTH                     (512)
-
-#define BOX_X_POS                           (0)
-#define BOX_Y_POS                           (0)
-#define BOX_HIGHT                           (100)
-#define BOX_WIDTH                           (100)
-
 /* Display I2C controller */
 #ifdef USE_KIT_PSE84_AI
-#define DISPLAY_I2C_CONTROLLER_HW     CYBSP_I2C_DISPLAY_CONTROLLER_HW
-#define DISPLAY_I2C_CONTROLLER_IRQ    CYBSP_I2C_DISPLAY_CONTROLLER_IRQ
-#define DISPLAY_I2C_CONTROLLER_config CYBSP_I2C_DISPLAY_CONTROLLER_config
+#define DISPLAY_I2C_CONTROLLER_HW           CYBSP_I2C_DISPLAY_CONTROLLER_HW
+#define DISPLAY_I2C_CONTROLLER_IRQ          CYBSP_I2C_DISPLAY_CONTROLLER_IRQ
+#define DISPLAY_I2C_CONTROLLER_config       CYBSP_I2C_DISPLAY_CONTROLLER_config
 #else
-#define DISPLAY_I2C_CONTROLLER_HW     CYBSP_I2C_CONTROLLER_HW
-#define DISPLAY_I2C_CONTROLLER_IRQ    CYBSP_I2C_CONTROLLER_IRQ
-#define DISPLAY_I2C_CONTROLLER_config CYBSP_I2C_CONTROLLER_config
+#define DISPLAY_I2C_CONTROLLER_HW           CYBSP_I2C_CONTROLLER_HW
+#define DISPLAY_I2C_CONTROLLER_IRQ          CYBSP_I2C_CONTROLLER_IRQ
+#define DISPLAY_I2C_CONTROLLER_config       CYBSP_I2C_CONTROLLER_config
 #endif
 
 #define NO_CAMERA_IMG_X_POS                 ((MTB_DISP_WAVESHARE_4P3_HOR_RES / 2U) \
@@ -126,34 +109,63 @@
 #define CAMERA_NOT_SUPPORTED_IMG_Y_POS      ((MTB_DISP_WAVESHARE_4P3_VER_RES / 2U) \
                                              - (CAMERA_NOT_SUPPORTED_IMG_HEIGHT / 2U))
 
+#ifdef RPS_DEMO_MODE_ENABLED
+#define LED_BLINK_DELAY_MS                  (200)
+#endif
 /*******************************************************************************
  * Global Variables
- *******************************************************************************/
-static float last_successful_frame_time = 0;                     // Last successful USB frame time
-static int recovery_attempts = 0;                               // USB recovery attempt counter
-extern cy_semaphore_t usb_semaphore;                            // USB semaphore for synchronization
-extern prediction_OD_t Prediction;                              // Object detection prediction
-extern volatile float Inference_time;                           // Inference time for model
-extern cy_semaphore_t model_semaphore;                          // Model semaphore for synchronization
-extern uint8_t _device_connected;                               // Device connected
-volatile float time_start1;                                     // Start time
-cy_stc_gfx_context_t gfx_context;                               // Graphics context structure
-vg_lite_buffer_t *renderTarget;                                 // Render target buffer
-vg_lite_buffer_t usb_yuv_frames[NUM_IMAGE_BUFFERS];             // USB YUV frame buffers
-vg_lite_buffer_t bgr565;                                        // BGR565 buffer
-vg_lite_buffer_t display_buffer[3];                             // Double display frame buffers
-float scale_Cam2Disp;                                           // Scale factor from camera to display
+ ****************************************************************************** */
+#ifdef USE_USB_CAM
+/* Last successful USB frame time*/
+static float last_successful_frame_time = 0;
+/* USB recovery attempt counter */                     
+static int recovery_attempts = 0;                               
+#endif
+/* USB semaphore for synchronization */
+extern cy_semaphore_t usb_semaphore; 
+/* Object detection prediction */                          
+extern prediction_od_t prediction;  
+/* Inference time for model */                            
+extern volatile float inference_time;
+/* Model semaphore for synchronization */                           
+extern cy_semaphore_t model_semaphore;   
+/* Device connected */                       
+extern uint8_t _device_connected;
+/* Start time */                               
+volatile float time_start1;   
+/* Graphics context structure */                                  
+cy_stc_gfx_context_t gfx_context; 
+/* Render target buffer*/                              
+vg_lite_buffer_t *render_target;   
+/* USB YUV frame buffers */                              
+vg_lite_buffer_t usb_yuv_frames[NUM_IMAGE_BUFFERS]; 
+/* BGR565 buffer */            
+vg_lite_buffer_t bgr565; 
+/* Double display frame buffers */                                       
+vg_lite_buffer_t display_buffer[3];  
+/* Scale factor from camera to display */                           
+float scale_cam_to_disp;                                           
+
+#ifdef USE_DVP_CAM
+/* Inference task moved inside GFX task for DVP cam */
+void cm55_inference_task ( void *arg );                         
+static cy_thread_t inference_thread;
+extern vg_lite_buffer_t dvp_bgr565_frames[NUM_IMAGE_BUFFERS];
+extern bool active_frame;
+#endif
 
 CY_SECTION(".cy_socmem_data")
+/* BGR888 integer buffer */
 __attribute__((aligned(64)))
-int8_t bgr888_int8[(IMAGE_HEIGHT) * (IMAGE_WIDTH) * 3] = {0};   // BGR888 integer buffer
+uint8_t bgr888_uint8[(IMAGE_HEIGHT) * (IMAGE_WIDTH) * 3] = {0};   
 
 CY_SECTION(".cy_xip") __attribute__((used))
-uint8_t contiguous_mem[VGLITE_HEAP_SIZE];                       // Contiguous memory for VGLite heap
-volatile void *vglite_heap_base = &contiguous_mem;              // VGLite heap base address
-volatile bool fb_pending = false;                               // Framebuffer pending flag
-volatile bool button_debouncing = false;                        // Flag indicating if button debouncing is active
-volatile uint32_t button_debounce_timestamp = 0;                // Timestamp for button debouncing in milliseconds
+/* Contiguous memory for VGLite heap */
+uint8_t contiguous_mem[VGLITE_HEAP_SIZE]; 
+/* VGLite heap base address */                      
+volatile void *vglite_heap_base = &contiguous_mem; 
+/* framebuffer pending flag */             
+volatile bool fb_pending = false;   
 
 /*******************************************************************************
  * Global Variables - Shared memory variable
@@ -164,74 +176,54 @@ oob_shared_data_t oob_shared_data_ns;
 
 /*******************************************************************************
  * Global Variables - I2C Controller Configuration
- *******************************************************************************/
-cy_stc_scb_i2c_context_t i2c_controller_context;                // I2C controller context
+ ****************************************************************************** */
+ /* I2C controller context */
+cy_stc_scb_i2c_context_t i2c_controller_context;                
 
 /*******************************************************************************
  * Global Variables - Interrupt Configurations
  *******************************************************************************/
-cy_stc_sysint_t dc_irq_cfg =                                   // DC Interrupt Configuration
+ /* DC Interrupt Configuration */
+cy_stc_sysint_t dc_irq_cfg =                                   
 {
-    .intrSrc      = gfxss_interrupt_dc_IRQn,                   // DC interrupt source
-    .intrPriority = DC_INT_PRIORITY                            // DC interrupt priority
+    .intrSrc      = gfxss_interrupt_dc_IRQn,                   
+    .intrPriority = DC_INT_PRIORITY                            
 };
-
-cy_stc_sysint_t gpu_irq_cfg =                                  // GPU Interrupt Configuration
+/* GPU Interrupt Configuration*/
+cy_stc_sysint_t gpu_irq_cfg =                                  
 {
-    .intrSrc      = gfxss_interrupt_gpu_IRQn,                  // GPU interrupt source
-    .intrPriority = GPU_INT_PRIORITY                           // GPU interrupt priority
+    .intrSrc      = gfxss_interrupt_gpu_IRQn,                  
+    .intrPriority = GPU_INT_PRIORITY                           
 };
-
-cy_stc_sysint_t i2c_controller_irq_cfg =                       // I2C Controller Interrupt Configuration
+/* I2C Controller Interrupt Configuration */
+cy_stc_sysint_t i2c_controller_irq_cfg =                       
 {
-    .intrSrc      = DISPLAY_I2C_CONTROLLER_IRQ,                  // I2C controller interrupt source
-    .intrPriority = I2C_CONTROLLER_IRQ_PRIORITY                // I2C controller interrupt priority
+    .intrSrc      = DISPLAY_I2C_CONTROLLER_IRQ,                  
+    .intrPriority = I2C_CONTROLLER_IRQ_PRIORITY                
 };
 
 /*******************************************************************************
  * Local Variables
  *******************************************************************************/
-static GFXSS_Type *base = (GFXSS_Type *)GFXSS;                 // Graphics subsystem base address
-static vg_lite_matrix_t matrix;                                // VGLite transformation matrix
-static int display_offset_x = 0;                               // Display X offset
-static int display_offset_y = 0;                               // Display Y offset
+ /* Graphics subsystem base address */
+static GFXSS_Type *base = (GFXSS_Type *)GFXSS;     
+/* VGLite transformation matrix */            
+static vg_lite_matrix_t matrix;
+/* Display X offset */                                
+static int display_offset_x = 0;   
+/* Display Y offset */                            
+static int display_offset_y = 0;                               
 
-static int16_t pathData[] = {
-    2, 100, 100,                                               // Move to (minX, minY)
-    4, 300, 100,                                               // Line from (minX, minY) to (maxX, minY)
-    4, 300, 200,                                               // Line from (maxX, minY) to (maxX, maxY)
-    4, 100, 200,                                               // Line from (maxX, maxY) to (minX, maxY)
-    4, 100, 100,                                               // Line from (minX, maxY) to (minX, minY)
-    0,
-};
-
-static vg_lite_path_t path = {
-    .bounding_box = {0, 0, CAMERA_WIDTH, CAMERA_HEIGHT},        // left, top, right, bottom
-    .quality = VG_LITE_HIGH,                                   // Quality
-    .format = VG_LITE_S16,                                     // Format
-    .uploaded = {0},                                           // Uploaded
-    .path_length = sizeof(pathData),                           // Path length
-    .path = pathData,                                          // Path data
-    .path_changed = 1                                          // Path changed
-};
-
-static uint8_t color_r[4] = {0, 0, 227, 8};                    // Red components: {Green, Black, Red, Blue}
-static uint8_t color_g[4] = {255, 0, 66, 24};                  // Green components: {Green, Black, Red, Blue}
-static uint8_t color_b[4] = {0, 0, 52, 168};                   // Blue components: {Green, Black, Red, Blue}
-
-/*******************************************************************************
- * Function Prototypes
- *******************************************************************************/
-void ifx_image_conv_RGB565_to_RGB888_i8(uint8_t *src_bgr565, int width, int height,
-                                        int8_t *dst_rgb888_i8, int dst_width, int dst_height);
-uint32_t ifx_lcd_get_Display_Width(void);
-uint32_t ifx_lcd_get_Display_Height(void);
-void ifx_lcd_display_Rect(uint16_t x0, uint16_t y0, uint8_t *image, uint16_t width, uint16_t height);
-
+/* Red components: {Green, Black, Red, Blue} */
+static uint8_t color_r[4] = {0, 0, 227, 8}; 
+/* Green components: {Green, Black, Red, Blue} */                   
+static uint8_t color_g[4] = {255, 0, 66, 24};  
+/* Blue components: {Green, Black, Red, Blue} */                
+static uint8_t color_b[4] = {0, 0, 52, 168};                   
 
 CY_SECTION_ITCM_BEGIN
 /*******************************************************************************
-* Function Name: mirrorImage
+* Function Name: mirror_image
 ********************************************************************************
 * Description: Mirrors an image horizontally by swapping pixels from left to right
 *              in the provided buffer. The function assumes a fixed bytes-per-pixel
@@ -243,13 +235,11 @@ CY_SECTION_ITCM_BEGIN
 * Return:
 *   None
 ********************************************************************************/
-void mirrorImage(vg_lite_buffer_t *buffer) {
+void mirror_image(vg_lite_buffer_t *buffer) {
     uint8_t temp[4];
     uint8_t *start, *end;
     int m, n;
-    int bytes_per_pixel  = 0 ;
-
-    bytes_per_pixel = 2;
+    int bytes_per_pixel  = 2;
 
     for (m = 0; m < CAMERA_HEIGHT ; m++) {
 
@@ -317,37 +307,47 @@ CY_SECTION_ITCM_BEGIN
 *   None
 *
 ********************************************************************************/
-int8_t * draw(void)
+uint8_t * draw(void)
 {
-    vg_lite_error_t error;      // = VG_LITE_SUCCESS;
+    vg_lite_error_t error = VG_LITE_SUCCESS;
     volatile uint32_t time_draw_start = ifx_time_get_ms_f();
-
-    extern uint8_t lastBuffer;
-    extern VideoBuffer_t _ImageBuff[];
+#ifdef USE_USB_CAM
+    extern uint8_t last_buffer;
+    extern video_buffer_t _image_buff[];
 
     // find a ready buffer
-    uint32_t workBuffer = lastBuffer;
+    uint32_t work_buffer = last_buffer;
 
-    while (_ImageBuff[workBuffer].BufReady == 0) {
+    while (_image_buff[work_buffer].buff_ready == 0) {
         for (int32_t ii = 0; ii < NUM_IMAGE_BUFFERS; ii++)
-            if (_ImageBuff[(workBuffer + ii) % NUM_IMAGE_BUFFERS].BufReady == 1) {
-                workBuffer = (workBuffer + ii) % NUM_IMAGE_BUFFERS;
+            if (_image_buff[(work_buffer + ii) % NUM_IMAGE_BUFFERS].buff_ready == 1) {
+                work_buffer = (work_buffer + ii) % NUM_IMAGE_BUFFERS;
                 break;
             }
         cy_rtos_delay_milliseconds(1);
     }
 
-    // reset all other buffers to available for input from camera
+    /* Reset all other buffers to available for input from camera */ 
     for (int32_t ii = 1; ii < NUM_IMAGE_BUFFERS; ii++)
-        _ImageBuff[(workBuffer + ii) % NUM_IMAGE_BUFFERS].BufReady = 0;
-
+        _image_buff[(work_buffer + ii) % NUM_IMAGE_BUFFERS].buff_ready = 0;
+#endif
     /* convert 320x240 YUYV 422 image into 320*240 BGR565 (scale:1) */
     volatile uint32_t time_draw_1 = ifx_time_get_ms_f();
-    error = vg_lite_blit(&bgr565, &usb_yuv_frames[workBuffer],
+#ifdef USE_USB_CAM
+    error = vg_lite_blit(&bgr565, &usb_yuv_frames[work_buffer],
                          NULL,                       // identity matrix
                          VG_LITE_BLEND_NONE,
                          0,
                          VG_LITE_FILTER_POINT);
+#endif
+#ifdef USE_DVP_CAM
+    error = vg_lite_blit(&bgr565, &dvp_bgr565_frames[active_frame],
+                         NULL,                       // identity matrix
+                         VG_LITE_BLEND_NONE,
+                         0,
+                         VG_LITE_FILTER_POINT);
+#endif
+
     if (error) {
         printf("\r\nvg_lite_blit() (320x240 YUYV 422 ==> 320*240 BGR565) returned error %d\r\n", error);
         cleanup();
@@ -356,13 +356,14 @@ int8_t * draw(void)
 
     vg_lite_finish();
 
+#ifdef USE_USB_CAM
     if (!point3mp_camera_enabled) {
-        mirrorImage(&bgr565);
+        mirror_image(&bgr565);
     }
-
+#endif
     /* convert 320x240 BGR565 image into 800x600 BGR565 (scale:2.5) */
     volatile uint32_t time_draw_3 = ifx_time_get_ms_f();
-    error = vg_lite_blit(renderTarget, &bgr565,
+    error = vg_lite_blit(render_target, &bgr565,
                          &matrix,
                          VG_LITE_BLEND_NONE,
                          0,
@@ -374,23 +375,24 @@ int8_t * draw(void)
     }
     vg_lite_finish();
 
+#ifdef USE_USB_CAM
     /* Clear USB buffer */
-    _ImageBuff[workBuffer].NumBytes = 0;
-    _ImageBuff[workBuffer].BufReady = 0;
-
+    _image_buff[work_buffer].num_bytes = 0;
+    _image_buff[work_buffer].buff_ready = 0;
+#endif
     /* Convert 320x240 BGR565 image into 256x240 BGR888 - 128 */
     volatile uint32_t time_draw_5 = ifx_time_get_ms_f();
-    ifx_image_conv_RGB565_to_RGB888_i8(bgr565.memory, CAMERA_WIDTH, CAMERA_HEIGHT, bgr888_int8, IMAGE_WIDTH, IMAGE_HEIGHT);
+    ifx_image_conv_RGB565_to_RGB888_i8(bgr565.memory, CAMERA_WIDTH, CAMERA_HEIGHT, bgr888_uint8, IMAGE_WIDTH, IMAGE_HEIGHT);
 
     volatile uint32_t time_draw_end = ifx_time_get_ms_f();
     // performance measures: time
-    extern float Prep_Wait_Buf, Prep_YUV422_to_bgr565, Prep_bgr565_to_Disp, Prep_RGB565_to_RGB888;
-    Prep_Wait_Buf         = time_draw_1 - time_draw_start;
-    Prep_YUV422_to_bgr565 = time_draw_3 - time_draw_1;
-    Prep_bgr565_to_Disp   = time_draw_5 - time_draw_3;
-    Prep_RGB565_to_RGB888 = time_draw_end - time_draw_5;
+    extern float prep_wait_buf, prep_YUV422_to_bgr565, prep_bgr565_to_disp, prep_RGB565_to_RGB888;
+    prep_wait_buf         = time_draw_1 - time_draw_start;
+    prep_YUV422_to_bgr565 = time_draw_3 - time_draw_1;
+    prep_bgr565_to_disp   = time_draw_5 - time_draw_3;
+    prep_RGB565_to_RGB888 = time_draw_end - time_draw_5;
 
-    return bgr888_int8;
+    return bgr888_uint8;
 }
 CY_SECTION_ITCM_END
 
@@ -431,35 +433,6 @@ static void gpu_irq_handler ( void )
 }
 
 /*******************************************************************************
-* Function Name: draw_rectangle
-*******************************************************************************
-*
-* Summary:
-*  Draws a rectangle on the render target using the VGLite graphics library.
-*
-* Parameters:
-*  color  - The color of the rectangle in 32-bit format.
-*  min_x  - The x-coordinate of the top-left corner of the rectangle.
-*  min_y  - The y-coordinate of the top-left corner of the rectangle.
-*  max_x  - The x-coordinate of the bottom-right corner of the rectangle.
-*  max_y  - The y-coordinate of the bottom-right corner of the rectangle.
-*
-* Return:
-*  None
-*
-*
-*******************************************************************************/
-void draw_rectangle(uint32_t color, int16_t min_x, int16_t min_y, int16_t max_x, int16_t max_y)
-{
-    pathData[1]  = min_x;  pathData[2]  = min_y;  // Top-left corner
-    pathData[4]  = max_x;  pathData[5]  = min_y;  // Top-right corner
-    pathData[7]  = max_x;  pathData[8]  = max_y;  // Bottom-right corner
-    pathData[10] = min_x;  pathData[11] = max_y;  // Bottom-left corner
-    pathData[13] = min_x;  pathData[14] = min_y;  // Close path back to top-left
-    vg_lite_draw(renderTarget, &path, VG_LITE_FILL_EVEN_ODD, &matrix, VG_LITE_BLEND_SRC_OVER, color);
-}
-
-/*******************************************************************************
 * Function Name: update_box_data
 *******************************************************************************
 *
@@ -469,8 +442,8 @@ void draw_rectangle(uint32_t color, int16_t min_x, int16_t min_y, int16_t max_x,
 *  based on class IDs, and draws rectangles and labels for each detected object.
 *
 * Parameters:
-*  renderTarget - Pointer to the vg_lite_buffer_t structure for rendering.
-*  prediction   - Pointer to the prediction_OD_t structure containing object
+*  render_target - Pointer to the vg_lite_buffer_t structure for rendering.
+*  prediction   - Pointer to the prediction_od_t structure containing object
 *                 detection results, including bounding box coordinates, class IDs,
 *                 and confidence scores.
 *
@@ -479,18 +452,18 @@ void draw_rectangle(uint32_t color, int16_t min_x, int16_t min_y, int16_t max_x,
 *
 *
 *******************************************************************************/
-void update_box_data(vg_lite_buffer_t *renderTarget, prediction_OD_t *prediction)
+void update_box_data(vg_lite_buffer_t *render_target, prediction_od_t *prediction)
 {
     for (int32_t i = 0; i < prediction->count; i++) {
-        int32_t jj = i << 2; // Index for bounding box coordinates
+        int32_t jj = i << 2;
         int32_t id = prediction->class_id[i];
-        int32_t cid = (id >= 0) ? (id % 7) + 1 : 0; // Map class ID to color index
+        int32_t cid = (id >= 0) ? (id % 3) + 1 : 0;
 
-        // Scale and offset bounding box coordinates
-        uint32_t xmin = (uint32_t)(prediction->bbox_int16[jj] * scale_Cam2Disp) + display_offset_x;
-        uint32_t ymin = (uint32_t)(prediction->bbox_int16[jj + 1] * scale_Cam2Disp) + display_offset_y;
-        uint32_t xmax = (uint32_t)(prediction->bbox_int16[jj + 2] * scale_Cam2Disp) + display_offset_x;
-        uint32_t ymax = (uint32_t)(prediction->bbox_int16[jj + 3] * scale_Cam2Disp) + display_offset_y;
+        /* Scale and offset bounding box coordinates */
+        uint32_t xmin = (uint32_t)(prediction->bbox_int16[jj] * scale_cam_to_disp) + display_offset_x;
+        uint32_t ymin = (uint32_t)(prediction->bbox_int16[jj + 1] * scale_cam_to_disp) + display_offset_y;
+        uint32_t xmax = (uint32_t)(prediction->bbox_int16[jj + 2] * scale_cam_to_disp) + display_offset_x;
+        uint32_t ymax = (uint32_t)(prediction->bbox_int16[jj + 3] * scale_cam_to_disp) + display_offset_y;
 
         // Set foreground color based on class ID
         if (cid == 3) {
@@ -507,11 +480,34 @@ void update_box_data(vg_lite_buffer_t *renderTarget, prediction_OD_t *prediction
         // Draw label with class name and confidence score for valid class IDs
         if (id >= 0 && cid < 4) {
             ifx_set_bg_color((color_r[cid] << 16) | (color_g[cid] << 8) | color_b[cid]);
-            ifx_print_to_buffer(xmin + 8, ymin - 36, "%s, %.2f", CLASS_STRING_LIST[id], prediction->conf[i] * 100.0f);
+            ifx_print_to_buffer(xmin + 8, ymin - 36, "%s, %.2f", prediction->class_string[i], prediction->conf[i] * 100.0f);
+            printf("------------------------------------------------\r\n");
+            printf("%s \r\n", prediction->class_string[i]);
+#ifdef RPS_DEMO_MODE_ENABLED
+            if (id == 0)
+            {
+                Cy_GPIO_Write(CYBSP_LED_RGB_GREEN_PORT, CYBSP_LED_RGB_GREEN_PIN, 1);
+                Cy_SysLib_Delay(LED_BLINK_DELAY_MS);
+                Cy_GPIO_Write(CYBSP_LED_RGB_GREEN_PORT, CYBSP_LED_RGB_GREEN_PIN, 0);
+            }
+            else if (id == 1)
+            {
+                Cy_GPIO_Write(CYBSP_LED_RGB_BLUE_PORT, CYBSP_LED_RGB_BLUE_PIN, 1);
+                Cy_SysLib_Delay(LED_BLINK_DELAY_MS);
+                Cy_GPIO_Write(CYBSP_LED_RGB_BLUE_PORT, CYBSP_LED_RGB_BLUE_PIN, 0);
+            }
+            else
+            {
+                Cy_GPIO_Write(CYBSP_LED_RGB_RED_PORT, CYBSP_LED_RGB_RED_PIN, 1);
+                Cy_SysLib_Delay(LED_BLINK_DELAY_MS);
+                Cy_GPIO_Write(CYBSP_LED_RGB_RED_PORT, CYBSP_LED_RGB_RED_PIN, 0);
+            }
+#endif
+
         }
 
         // Render the buffer
-        ifx_draw_buffer(renderTarget->memory);
+        ifx_draw_buffer(render_target->memory);
     }
 }
 
@@ -525,7 +521,7 @@ void update_box_data(vg_lite_buffer_t *renderTarget, prediction_OD_t *prediction
 *  with a label.
 *
 * Parameters:
-*  renderTarget - Pointer to the vg_lite_buffer_t structure for rendering.
+*  render_target - Pointer to the vg_lite_buffer_t structure for rendering.
 *  num          - Floating-point value representing the model inference time in
 *                 milliseconds.
 *
@@ -534,11 +530,11 @@ void update_box_data(vg_lite_buffer_t *renderTarget, prediction_OD_t *prediction
 *
 *
 *******************************************************************************/
-void update_box_data1(vg_lite_buffer_t *renderTarget, float num)
+void update_box_data1(vg_lite_buffer_t *render_target, float num)
 {
     ifx_set_bg_color((color_r[3] << 16) | (color_g[3] << 8) | color_b[3]); // Set background color
     ifx_print_to_buffer(10, 440, "%s %.1f %s", "Model", num, "ms");         // Print inference time
-    ifx_draw_buffer(renderTarget->memory);                                   // Render the buffer
+    ifx_draw_buffer(render_target->memory);                                   // Render the buffer
 }
 
 
@@ -603,19 +599,19 @@ static void i2c_controller_interrupt(void)
 *******************************************************************************/
 void VG_switch_frame(void)
 {
-    static int current_buffer = 0;
-
     /* Set Video/Graphics layer buffer address and transfer the frame buffer to DC */
-    Cy_GFXSS_Set_FrameBuffer(base, (uint32_t*)renderTarget->address, &gfx_context);
+    Cy_GFXSS_Set_FrameBuffer(base, (uint32_t*)render_target->address, &gfx_context);
     __DMB();
 
+#ifdef USE_USB_CAM
+    static int current_buffer = 0;
     /* Swap buffers */
     current_buffer ^= 1;
-    renderTarget = &display_buffer[current_buffer];
+    render_target = &display_buffer[current_buffer];
 
     __DMB();
 
-    if (!Logitech_camera_enabled)
+    if (!logitech_camera_enabled)
     {
         cy_rtos_semaphore_set(&usb_semaphore);
     }
@@ -627,6 +623,7 @@ void VG_switch_frame(void)
             printf("[USB Camera] USB Semaphore set failed\r\n");
         }
     }
+#endif
 }
 
 /*******************************************************************************
@@ -644,24 +641,25 @@ void VG_switch_frame(void)
 *  None
 *
 *******************************************************************************/
+#ifdef USE_USB_CAM
 static void init_buffer_system(void)
 {
     // Ensure clean startup state
     for (int i = 0; i < NUM_IMAGE_BUFFERS; i++)
     {
-        _ImageBuff[i].BufReady = 0;
-        _ImageBuff[i].NumBytes = 0;
+        _image_buff[i].buff_ready = 0;
+        _image_buff[i].num_bytes = 0;
     }
     __DMB();
 
-    lastBuffer = 0;
+    last_buffer = 0;
     __DMB();
 
     // Reset timeout tracking
     last_successful_frame_time = 0;
     recovery_attempts = 0;
 }
-
+#endif
 
 /*******************************************************************************
 * Function Name: cm55_ns_gfx_task
@@ -686,6 +684,11 @@ void cm55_ns_gfx_task(void *arg)
     vg_lite_error_t vglite_status = VG_LITE_SUCCESS;
     cy_rslt_t result = CY_RSLT_SUCCESS;
     cy_en_gfx_status_t status = CY_GFX_SUCCESS;
+    volatile float time_start = 0;
+    volatile float time_prev = 0;
+    volatile float time_end = 0;
+    (void)time_prev;
+    (void)time_end;
     cy_en_sysint_status_t sysint_status = CY_SYSINT_SUCCESS;
     cy_en_scb_i2c_status_t i2c_result = CY_SCB_I2C_SUCCESS;
 
@@ -728,7 +731,6 @@ void cm55_ns_gfx_task(void *arg)
     if (CY_SCB_I2C_SUCCESS != i2c_result)
     {
         printf("I2C controller initialization failed !!\n");
-        CY_ASSERT(0);
     }
 
     /* Initialize the I2C interrupt */
@@ -736,7 +738,6 @@ void cm55_ns_gfx_task(void *arg)
     if (CY_SYSINT_SUCCESS != sysint_status)
     {
         printf("I2C controller interrupt initialization failed\r\n");
-        CY_ASSERT(0);
     }
     NVIC_EnableIRQ(i2c_controller_irq_cfg.intrSrc);
     Cy_SCB_I2C_Enable(DISPLAY_I2C_CONTROLLER_HW);
@@ -746,7 +747,6 @@ void cm55_ns_gfx_task(void *arg)
     if (CY_SCB_I2C_SUCCESS != i2c_result)
     {
         printf("Waveshare 4.3-Inch display init failed with status = %u\r\n", (unsigned int)i2c_result);
-        CY_ASSERT(0);
     }
 
     /* Initialize VGLite memory parameters */
@@ -776,8 +776,9 @@ void cm55_ns_gfx_task(void *arg)
             VG_LITE_ERROR_EXIT("display_buffer[] allocation failed in vglite space: vg_lite_allocate() returned error %d\r\n", vglite_status);
         }
     }
-    renderTarget = &display_buffer[0];
+    render_target = &display_buffer[0];
 
+#ifdef USE_USB_CAM
     /* Allocate the camera buffers */
     for (int32_t i = 0; i < NUM_IMAGE_BUFFERS; i++)
     {
@@ -788,10 +789,24 @@ void cm55_ns_gfx_task(void *arg)
         vglite_status = vg_lite_allocate(&usb_yuv_frames[i]);
         if (VG_LITE_SUCCESS != vglite_status)
         {
-            VG_LITE_ERROR_EXIT("camera buffers allocation failed in vglite space: vg_lite_allocate() returned error %d\r\n", vglite_status);
+            VG_LITE_ERROR_EXIT("USB camera buffers allocation failed in vglite space: vg_lite_allocate() returned error %d\r\n", vglite_status);
         }
     }
-
+#endif
+#ifdef USE_DVP_CAM
+    for ( uint8_t i = 0; i < NUM_IMAGE_BUFFERS; i++ )
+    {
+        dvp_bgr565_frames[i].width = CAMERA_WIDTH;
+        dvp_bgr565_frames[i].height = CAMERA_HEIGHT;
+        dvp_bgr565_frames[i].format = VG_LITE_BGR565;
+        dvp_bgr565_frames[i].image_mode = VG_LITE_NORMAL_IMAGE_MODE;
+        vglite_status = vg_lite_allocate(&dvp_bgr565_frames[i]);
+        if (VG_LITE_SUCCESS != vglite_status)
+        {
+            VG_LITE_ERROR_EXIT("DVP camera buffers allocation failed in vglite space: vg_lite_allocate() returned error %d\r\n", vglite_status);
+        }
+    }
+#endif
     /* Allocate the work camera buffer */
     bgr565.width = CAMERA_WIDTH;
     bgr565.height = CAMERA_HEIGHT;
@@ -804,7 +819,7 @@ void cm55_ns_gfx_task(void *arg)
     }
 
     /* Clear the buffer with black color */
-    vglite_status = vg_lite_clear(renderTarget, NULL, BLACK_COLOR);
+    vglite_status = vg_lite_clear(render_target, NULL, BLACK_COLOR);
     if (VG_LITE_SUCCESS != vglite_status)
     {
         VG_LITE_ERROR_EXIT("Clear failed: vg_lite_clear() returned error %d\r\n", vglite_status);
@@ -812,39 +827,48 @@ void cm55_ns_gfx_task(void *arg)
 
     /* Define the transformation matrix for camera image to display */
     vg_lite_identity(&matrix);
-    float scale_Cam2Disp_x = (float)(DISPLAY_WIDTH) / (float)CAMERA_WIDTH;
-    float scale_Cam2Disp_y = (float)(DISPLAY_HEIGHT) / (float)CAMERA_HEIGHT;
-    scale_Cam2Disp = max(scale_Cam2Disp_x, scale_Cam2Disp_y);
-    vg_lite_scale(scale_Cam2Disp, scale_Cam2Disp, &matrix);
+    float scale_cam_to_disp_x = (float)(DISPLAY_WIDTH) / (float)CAMERA_WIDTH;
+    float scale_cam_to_disp_y = (float)(DISPLAY_HEIGHT) / (float)CAMERA_HEIGHT;
+    scale_cam_to_disp = max(scale_cam_to_disp_x, scale_cam_to_disp_y);
+    vg_lite_scale(scale_cam_to_disp, scale_cam_to_disp, &matrix);
 
     /* Move the scaled frame to the display center */
-    float translate_x = ((DISPLAY_WIDTH) / scale_Cam2Disp - CAMERA_WIDTH) * 0.5f;
-    float translate_y = (DISPLAY_HEIGHT / scale_Cam2Disp - CAMERA_HEIGHT) * 0.5f;
+    float translate_x = ((DISPLAY_WIDTH) / scale_cam_to_disp - CAMERA_WIDTH) * 0.5f;
+    float translate_y = (DISPLAY_HEIGHT / scale_cam_to_disp - CAMERA_HEIGHT) * 0.5f;
     vg_lite_translate(translate_x, translate_y, &matrix);
 
-    display_offset_x = ((DISPLAY_WIDTH) - scale_Cam2Disp * IMAGE_WIDTH) / 2;
-    display_offset_y = (DISPLAY_HEIGHT - scale_Cam2Disp * CAMERA_HEIGHT) / 2;
+    display_offset_x = ((DISPLAY_WIDTH) - scale_cam_to_disp * IMAGE_WIDTH) / 2;
+    display_offset_y = (DISPLAY_HEIGHT - scale_cam_to_disp * CAMERA_HEIGHT) / 2;
 
-    Cy_GFXSS_Set_FrameBuffer(base, (uint32_t *)renderTarget->address, &gfx_context);
+    Cy_GFXSS_Set_FrameBuffer(base, (uint32_t *)render_target->address, &gfx_context);
     vg_lite_flush();
-    Cy_GFXSS_Set_FrameBuffer(base, (uint32_t *)renderTarget->address, &gfx_context);
+    Cy_GFXSS_Set_FrameBuffer(base, (uint32_t *)render_target->address, &gfx_context);
 
     /* Delay for USB enumeration to complete before rendering */
     vTaskDelay(pdMS_TO_TICKS(1500));
 
     /* Initialize buffer states - clear any startup artifacts */
+#ifdef USE_USB_CAM
     for (int i = 0; i < NUM_IMAGE_BUFFERS; i++)
     {
-        _ImageBuff[i].BufReady = 0;
-        _ImageBuff[i].NumBytes = 0;
+        _image_buff[i].buff_ready = 0;
+        _image_buff[i].num_bytes = 0;
     }
     __DMB();
 
     init_buffer_system();
-
+#endif
+#ifdef USE_DVP_CAM
+    /* DVP camera requires the buffers to be initialized and formatted as per desired configurations */
+    result = cy_rtos_thread_create( &inference_thread, &cm55_inference_task, INFERENCE_TASK_NAME, NULL,
+                                    INFERENCE_TASK_STACK_SIZE, INFERENCE_TASK_PRIORITY, NULL);
+    if ( CY_RSLT_SUCCESS != result ) {
+        CY_ASSERT(0);
+    }
+#endif
     for (;;)
     {
-
+#ifdef USE_USB_CAM
         if (!_device_connected)
         {
             int i = 0;
@@ -853,20 +877,20 @@ void cm55_ns_gfx_task(void *arg)
                 i++;
                 __DMB();
                 vg_lite_finish();
-                Cy_GFXSS_Set_FrameBuffer(base, (uint32_t *)renderTarget->address, &gfx_context);
+                Cy_GFXSS_Set_FrameBuffer(base, (uint32_t *)render_target->address, &gfx_context);
                 __DMB();
 
                 /* Clear the buffer with black color */
-                vglite_status = vg_lite_clear(renderTarget, NULL, BLACK_COLOR);
+                vglite_status = vg_lite_clear(render_target, NULL, BLACK_COLOR);
                 if (VG_LITE_SUCCESS != vglite_status)
                 {
                     VG_LITE_ERROR_EXIT("Clear failed: vg_lite_clear() returned error %d\r\n", vglite_status);
                 }
                 __DMB();
 
-                ifx_lcd_display_Rect(NO_CAMERA_IMG_X_POS, NO_CAMERA_IMG_Y_POS, (uint8_t *)no_camera_img_map, NO_CAMERA_IMG_WIDTH, NO_CAMERA_IMG_HEIGHT);              
+                ifx_lcd_display_Rect(NO_CAMERA_IMG_X_POS, NO_CAMERA_IMG_Y_POS, (uint8_t *)no_camera_img_map, NO_CAMERA_IMG_WIDTH, NO_CAMERA_IMG_HEIGHT);
 
-                Cy_GFXSS_Set_FrameBuffer(base, (uint32_t *)renderTarget->address, &gfx_context);
+                Cy_GFXSS_Set_FrameBuffer(base, (uint32_t *)render_target->address, &gfx_context);
                 __DMB();
             }
         }
@@ -880,11 +904,11 @@ void cm55_ns_gfx_task(void *arg)
                     i++;
                     __DMB();
                     vg_lite_finish();
-                    Cy_GFXSS_Set_FrameBuffer(base, (uint32_t *)renderTarget->address, &gfx_context);
+                    Cy_GFXSS_Set_FrameBuffer(base, (uint32_t *)render_target->address, &gfx_context);
                     __DMB();
 
                     /* Clear the buffer with black color */
-                    vglite_status = vg_lite_clear(renderTarget, NULL, BLACK_COLOR);
+                    vglite_status = vg_lite_clear(render_target, NULL, BLACK_COLOR);
                     if (VG_LITE_SUCCESS != vglite_status)
                     {
                         VG_LITE_ERROR_EXIT("Clear failed: vg_lite_clear() returned error %d\r\n", vglite_status);
@@ -893,24 +917,28 @@ void cm55_ns_gfx_task(void *arg)
 
                     ifx_lcd_display_Rect(CAMERA_NOT_SUPPORTED_IMG_X_POS, CAMERA_NOT_SUPPORTED_IMG_Y_POS, (uint8_t *)camera_not_supported_img_map, CAMERA_NOT_SUPPORTED_IMG_WIDTH, CAMERA_NOT_SUPPORTED_IMG_HEIGHT);
 
-                    Cy_GFXSS_Set_FrameBuffer(base, (uint32_t *)renderTarget->address, &gfx_context);
+                    Cy_GFXSS_Set_FrameBuffer(base, (uint32_t *)render_target->address, &gfx_context);
                     __DMB();
                 }
                 while (_device_connected);
             }
         }
-
+#endif
         result = cy_rtos_semaphore_get(&model_semaphore, 0xFFFFFFFF);
         if (CY_RSLT_SUCCESS == result)
         {
+#ifdef USE_USB_CAM
             if (_device_connected)
+#endif
             {
                 /* Update bounding box data and inference time */
-                update_box_data(renderTarget, &Prediction);
-                update_box_data1(renderTarget, Inference_time);
+                update_box_data(render_target, &prediction);
+                update_box_data1(render_target, inference_time);
 
                 VG_switch_frame();
 
+                time_end = ifx_time_get_ms_f();
+                time_prev = time_start;
             }
         }
     }

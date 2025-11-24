@@ -6,7 +6,33 @@
 * Related Document : See README.md
 *
 *******************************************************************************
-* $ Copyright 2025 Cypress Semiconductor $
+ * (c) 2025, Infineon Technologies AG, or an affiliate of Infineon
+ * Technologies AG. All rights reserved.
+ * This software, associated documentation and materials ("Software") is
+ * owned by Infineon Technologies AG or one of its affiliates ("Infineon")
+ * and is protected by and subject to worldwide patent protection, worldwide
+ * copyright laws, and international treaty provisions. Therefore, you may use
+ * this Software only as provided in the license agreement accompanying the
+ * software package from which you obtained this Software. If no license
+ * agreement applies, then any use, reproduction, modification, translation, or
+ * compilation of this Software is prohibited without the express written
+ * permission of Infineon.
+ *
+ * Disclaimer: UNLESS OTHERWISE EXPRESSLY AGREED WITH INFINEON, THIS SOFTWARE
+ * IS PROVIDED AS-IS, WITH NO WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+ * INCLUDING, BUT NOT LIMITED TO, ALL WARRANTIES OF NON-INFRINGEMENT OF
+ * THIRD-PARTY RIGHTS AND IMPLIED WARRANTIES SUCH AS WARRANTIES OF FITNESS FOR A
+ * SPECIFIC USE/PURPOSE OR MERCHANTABILITY.
+ * Infineon reserves the right to make changes to the Software without notice.
+ * You are responsible for properly designing, programming, and testing the
+ * functionality and safety of your intended application of the Software, as
+ * well as complying with any legal requirements related to its use. Infineon
+ * does not guarantee that the Software will be free from intrusion, data theft
+ * or loss, or other breaches ("Security Breaches"), and Infineon shall have
+ * no liability arising out of any Security Breaches. Unless otherwise
+ * explicitly approved by Infineon, the Software may not be used in any
+ * application where a failure of the Product or any consequences of the use
+ * thereof can reasonably be expected to result in personal injury.
 ******************************************************************************/
 
 /******************************************************************************
@@ -323,7 +349,7 @@ void ifx_image_conv_RGB565_to_RGB888( uint8_t *src_bgr565, int32_t width, int32_
     uint16_t    *src_bgr565_16p = (uint16_t *) &src_bgr565[offset_width << 1];   /* 2 bytes per pixel */
 
     for ( int i = 0; i < min_height; i++ ) {
-        uint8_t     *rgb888     = &dst_rgb888[i * dst_width * 3];   // 3 bytes per pixel
+        uint8_t     *rgb888     = (uint8_t *)&dst_rgb888[i * dst_width * 3];   // 3 bytes per pixel
         uint32_t    *bgr565_32p = (uint32_t *)&src_bgr565_16p[i * width];
 
         for ( int j = (min_width >> 1); j > 0; j-- ) {
@@ -501,13 +527,13 @@ void ifx_image_conv_RGB565_to_RGB888_quant( uint8_t *src_bgr565, int32_t width, 
 *
 * Parameters:
 *  uint32_t pixel: 16-bit RGB565 color value
-*  int8_t *rgb888_8p: Pointer to the destination RGB888 buffer (int8_t)
+*  uint8_t *rgb888_8p: Pointer to the destination RGB888 buffer (uint8_t)
 *
 * Return:
 *  int8_t*: Pointer to the next position in the RGB888 buffer
 *
 ******************************************************************************/
-inline int8_t * ifx_RGB565_to_RGB888_i8( uint32_t pixel, int8_t *rgb888_8p )
+inline uint8_t * ifx_RGB565_to_RGB888_i8( uint32_t pixel, uint8_t *rgb888_8p )
 {
     /* Extract B, G, and R components from BGR565 pixel (already in BGR order) */
     uint8_t    blue   = (pixel << 3) & 0x0F8;            /* Extract lower 5 bits for blue */
@@ -515,19 +541,19 @@ inline int8_t * ifx_RGB565_to_RGB888_i8( uint32_t pixel, int8_t *rgb888_8p )
     uint8_t    red    = (pixel >> 8) & 0x0F8;            /* Extract upper 5 bits for red, right shift 11 for 8-bit representation */
 
 #ifndef BGR888_FULL_8_BIT
-    *rgb888_8p++ = red   - 128;
-    *rgb888_8p++ = green - 128;
-    *rgb888_8p++ = blue  - 128;
+    *rgb888_8p++ = red;
+    *rgb888_8p++ = green;
+    *rgb888_8p++ = blue;
 #else
 
 #ifndef BGR888_FULL_8_BIT_ROUND
-    *rgb888_8p++ = (red    | (red    >> 5))  - 128;
-    *rgb888_8p++ = (green  | (green  >> 6))  - 128;
-    *rgb888_8p++ = (blue   | (blue   >> 5))  - 128;
+    *rgb888_8p++ = (red    | (red    >> 5));
+    *rgb888_8p++ = (green  | (green  >> 6));
+    *rgb888_8p++ = (blue   | (blue   >> 5));
 #else
-    *rgb888_8p++ = (red    | (red    >> 5) | ((red   >> 4) & 0x01))  - 128;    /* (significant 5-bit) | (low 3-bit with high 3-bit) | (round with 4th high bit) */
-    *rgb888_8p++ = (green  | (green  >> 6) | ((green >> 5) & 0x01))  - 128;    /* (significant 6-bit) | (low 2-bit with high 2-bit) | (round with 3rd high bit) */
-    *rgb888_8p++ = (blue   | (blue   >> 5) | ((blue  >> 4) & 0x01))  - 128;    /* (significant 5-bit) | (low 3-bit with high 3-bit) | (round with 4th high bit) */
+    *rgb888_8p++ = (red    | (red    >> 5) | ((red   >> 4) & 0x01));    /* (significant 5-bit) | (low 3-bit with high 3-bit) | (round with 4th high bit) */
+    *rgb888_8p++ = (green  | (green  >> 6) | ((green >> 5) & 0x01));    /* (significant 6-bit) | (low 2-bit with high 2-bit) | (round with 3rd high bit) */
+    *rgb888_8p++ = (blue   | (blue   >> 5) | ((blue  >> 4) & 0x01));    /* (significant 5-bit) | (low 3-bit with high 3-bit) | (round with 4th high bit) */
 #endif  /* BGR888_FULL_8_BIT_ROUND */
 
 #endif  /* BGR888_FULL_8_BIT */
@@ -550,7 +576,7 @@ inline int8_t * ifx_RGB565_to_RGB888_i8( uint32_t pixel, int8_t *rgb888_8p )
 *  uint8_t *src_bgr565: Pointer to the source RGB565 image buffer
 *  int width: Width of the source image
 *  int height: Height of the source image
-*  int8_t *dst_rgb888_i8: Pointer to the destination RGB888 image buffer 
+*  uint8_t *dst_rgb888_i8: Pointer to the destination RGB888 image buffer 
 *                         (int8_t)
 *  int dst_width: Width of the destination image
 *  int dst_height: Height of the destination image
@@ -560,14 +586,14 @@ inline int8_t * ifx_RGB565_to_RGB888_i8( uint32_t pixel, int8_t *rgb888_8p )
 *
 ******************************************************************************/
 void ifx_image_conv_RGB565_to_RGB888_i8( uint8_t *src_bgr565, int width, int height,
-        int8_t *dst_rgb888_i8, int dst_width, int dst_height )
+        uint8_t *dst_rgb888_i8, int dst_width, int dst_height )
 {
     int min_height = min( height, dst_height );
     int min_width  = min( width, dst_width );
     int offset_width = ( width - min_width ) / 2;
 
     for ( int i = 0; i < min_height; i++ ) {
-        int8_t  *rgb888_8p = &dst_rgb888_i8[i * dst_width * 3];
+        uint8_t  *rgb888_8p = (uint8_t *)&dst_rgb888_i8[i * dst_width * 3];
         uint8_t *bgr565_8p = &src_bgr565[(i * width + offset_width) * 2];
 #ifdef BGR565_32bit_MEMORY_ACCESS    /* 32-bit two-pixel memory-access */
         uint32_t    *bgr565_32p = (uint32_t *)bgr565_8p;

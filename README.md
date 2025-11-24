@@ -1,12 +1,12 @@
-# PSOC&trade; Edge MCU: DEEPCRAFT&trade; deploy vision
+# PSOC&trade; Edge MCU: Machine learning – DEEPCRAFT&trade; deploy vision
 
-This code example demonstrates a real-time hand gesture detection that uses a USB camera to capture live video and a DEEPCRAFT&trade; Studio object detection model to detect hand gestures (rock, paper, or scissors) in the video feed using ModusToolbox&trade;. The detected gestures are highlighted by drawing a bounding box around the gesture and displaying the corresponding text (rock, paper, or scissors) in a text box on the display.
+This code example demonstrates a real-time hand gesture detection that uses a USB camera to capture live video and a DEEPCRAFT&trade; Studio object detection model to detect hand gestures (rock, paper, or scissors) in the video feed using ModusToolbox&trade;. The detected gestures are highlighted by drawing a bounding box around the gesture and displaying the corresponding text (rock, paper, or scissors) in a text box on the display and on a terminal.
 
-This code example has a three project structure: CM33 secure, CM33 non-secure, and CM55 projects. All three projects are programmed to the external QSPI flash and executed in Execute in Place (XIP) mode. Extended boot launches the CM33 secure project from a fixed location in the external flash, which then configures the protection settings and launches the CM33 non-secure application. Additionally, CM33 non-secure application enables CM55 CPU and launches the CM55 application.
+This code example has a three-project structure: CM33 secure, CM33 non-secure, and CM55 projects. All three projects are programmed to the external QSPI flash and executed in Execute in Place (XIP) mode. Extended boot launches the CM33 secure project from a fixed location in the external flash, which then configures the protection settings and launches the CM33 non-secure application. Additionally, CM33 non-secure application enables CM55 CPU and launches the CM55 application.
 
 [View this README on GitHub.](https://github.com/Infineon/mtb-example-psoc-edge-ml-deepcraft-deploy-vision)
 
-[Provide feedback on this code example.](https://cypress.co1.qualtrics.com/jfe/form/SV_1NTns53sK2yiljn?Q_EED=eyJVbmlxdWUgRG9jIElkIjoiQ0UyNDIxNDUiLCJTcGVjIE51bWJlciI6IjAwMi00MjE0NSIsIkRvYyBUaXRsZSI6IlBTT0MmdHJhZGU7IEVkZ2UgTUNVOiBERUVQQ1JBRlQmdHJhZGU7IGRlcGxveSB2aXNpb24iLCJyaWQiOiJzZGFrIiwiRG9jIHZlcnNpb24iOiIxLjAuMCIsIkRvYyBMYW5ndWFnZSI6IkVuZ2xpc2giLCJEb2MgRGl2aXNpb24iOiJNQ0QiLCJEb2MgQlUiOiJJQ1ciLCJEb2MgRmFtaWx5IjoiUFNPQyJ9)
+[Provide feedback on this code example.](https://cypress.co1.qualtrics.com/jfe/form/SV_1NTns53sK2yiljn?Q_EED=eyJVbmlxdWUgRG9jIElkIjoiQ0UyNDIxNDUiLCJTcGVjIE51bWJlciI6IjAwMi00MjE0NSIsIkRvYyBUaXRsZSI6IlBTT0MmdHJhZGU7IEVkZ2UgTUNVOiBNYWNoaW5lIGxlYXJuaW5nIOKAkyBERUVQQ1JBRlQmdHJhZGU7IGRlcGxveSB2aXNpb24iLCJyaWQiOiJzYW5kZWVwLmFrQGluZmluZW9uLmNvbSIsIkRvYyB2ZXJzaW9uIjoiMi4wLjAiLCJEb2MgTGFuZ3VhZ2UiOiJFbmdsaXNoIiwiRG9jIERpdmlzaW9uIjoiTUNEIiwiRG9jIEJVIjoiSUNXIiwiRG9jIEZhbWlseSI6IlBTT0MifQ==)
 
 See the [Design and implementation](docs/design_and_implementation.md) for the functional description of this code example.
 
@@ -26,7 +26,7 @@ See the [Design and implementation](docs/design_and_implementation.md) for the f
 
 > **Notes:**
   - IAR is not supported by the TensorFlow Lite for Microcontrollers (TFLM) library
-  - This code example fails to build in RELEASE mode with the `GCC_ARM` toolchain v14.2.1 as it does not recognize some of the Helium instructions of the CMSIS-DSP library. This issue is not present in the ARM&reg; Compiler for Embedded (armclang)
+  - This code example fails to build in RELEASE mode with the `GCC_ARM` toolchain v14.2.1 as it does not recognize some of the Helium instructions of the CMSIS-DSP library. This issue is not present in the Arm&reg; Compiler for Embedded (armclang)
 
 
 ## Supported kits (make variable 'TARGET')
@@ -48,11 +48,16 @@ Ensure the following jumper and pin configuration on board.
 
 ### Supported camera and display
 
-- Connect any of the following camera to the USB host port on the kit
+- Connect any of the following cameras to the USB host port on the kit
   - [HBVCAM OV7675 0.3MP MINI Camera](https://www.hbvcamera.com/0-3mp-pixel-usb-cameras/hbvcam-ov7675-0.3mp-mini-laptop-camera-module.html) <br>
   - [Logitech C920 HD Pro Webcam](https://www.logitech.com/en-ch/shop/p/c920-pro-hd-webcam) <br>
+  - [Logitech C920e Business Webcam](https://www.logitech.com/en-ch/products/webcams/c920e-business-webcam) <br>
   - [HBVCAM OS02F10 2MP Camera](https://www.hbvcamera.com/2-mega-pixel-usb-cameras/2mp-1080p-auto-focus-hd-usb-camera-module-for-atm-machine.html) <br>
 
+- The PSOC&trade; Edge AI Kit also supports -
+  - [OV7675 0.3MP DVP Camera module](https://blog.arducam.com/products/camera-breakout-board/0-3mp-ov7675) <br>
+
+> **Note:** For any USB camera other than the ones listed above, ensure that the vendor ID  and product ID of the camera being used are correctly configured in the *usb_camera_task.c* and *usb_camera_task.h* file.
 
 - **Waveshare 4.3 inch Raspberry Pi DSI 800 x 480 display:** <br>
   Connect the FPC 15-pin cable between the display connector and the PSOC&trade; Edge E84's RPI MIPI DSI connector as outlined in **Table 1** and **Figure 1**
@@ -92,7 +97,7 @@ See [Using the code example](docs/using_the_code_example.md) for instructions on
 
 3. Connect the USB camera to the kit's USB host port and display as mentioned in the [Supported camera and display](#supported-camera-and-display) section
 
-4. After programming, the application starts automatically. Confirm that "PSOC Edge MCU: DEEPCRAFT Deploy Vision" is displayed on the UART terminal and the kit will start capturing video from the USB camera
+4. After programming, the application starts automatically. Confirm that "PSOC Edge MCU: Machine learning DEEPCRAFT deploy vision" is displayed on the UART terminal and the kit will start capturing video from the USB camera
 
    **Figure 2. Terminal output on program startup for deploy vision**
 
@@ -110,8 +115,11 @@ See [Using the code example](docs/using_the_code_example.md) for instructions on
 
   <br>
 
-7. Ensure that **USER LED** is turning **ON** when the hand gestures are detected
+7. Labels for the detected hand gesture is displayed on the UART terminala
 
+   **Figure 4. Terminal output on gesture detection for deploy vision**
+
+   ![](images/terminal-gesture-detection.png)
 
 ## Related resources
 
@@ -139,6 +147,7 @@ Document title: *CE242145* – *PSOC&trade; Edge MCU: DEEPCRAFT&trade; deploy vi
  Version | Description of change
  ------- | ---------------------
  1.0.0   | New code example
+ 2.0.0   | Updated to work with latest DEEPCRAFT flow
 <br>
 
 
