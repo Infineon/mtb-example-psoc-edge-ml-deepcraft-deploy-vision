@@ -6,7 +6,7 @@ This code example has a three-project structure: CM33 secure, CM33 non-secure, a
 
 [View this README on GitHub.](https://github.com/Infineon/mtb-example-psoc-edge-ml-deepcraft-deploy-vision)
 
-[Provide feedback on this code example.](https://cypress.co1.qualtrics.com/jfe/form/SV_1NTns53sK2yiljn?Q_EED=eyJVbmlxdWUgRG9jIElkIjoiQ0UyNDIxNDUiLCJTcGVjIE51bWJlciI6IjAwMi00MjE0NSIsIkRvYyBUaXRsZSI6IlBTT0MmdHJhZGU7IEVkZ2UgTUNVOiBNYWNoaW5lIGxlYXJuaW5nIOKAkyBERUVQQ1JBRlQmdHJhZGU7IGRlcGxveSB2aXNpb24iLCJyaWQiOiJzYW5kZWVwLmFrQGluZmluZW9uLmNvbSIsIkRvYyB2ZXJzaW9uIjoiMi4wLjAiLCJEb2MgTGFuZ3VhZ2UiOiJFbmdsaXNoIiwiRG9jIERpdmlzaW9uIjoiTUNEIiwiRG9jIEJVIjoiSUNXIiwiRG9jIEZhbWlseSI6IlBTT0MifQ==)
+[Provide feedback on this code example.](https://yourvoice.infineon.com/jfe/form/SV_1NTns53sK2yiljn?Q_EED=eyJVbmlxdWUgRG9jIElkIjoiQ0UyNDIxNDUiLCJTcGVjIE51bWJlciI6IjAwMi00MjE0NSIsIkRvYyBUaXRsZSI6IlBTT0MmdHJhZGU7IEVkZ2UgTUNVOiBNYWNoaW5lIGxlYXJuaW5nIOKAkyBERUVQQ1JBRlQmdHJhZGU7IGRlcGxveSB2aXNpb24iLCJyaWQiOiJzYW5kZWVwLmFrQGluZmluZW9uLmNvbSIsIkRvYyB2ZXJzaW9uIjoiMi4wLjEiLCJEb2MgTGFuZ3VhZ2UiOiJFbmdsaXNoIiwiRG9jIERpdmlzaW9uIjoiTUNEIiwiRG9jIEJVIjoiSUNXIiwiRG9jIEZhbWlseSI6IlBTT0MifQ==)
 
 See the [Design and implementation](docs/design_and_implementation.md) for the functional description of this code example.
 
@@ -45,6 +45,7 @@ Ensure the following jumper and pin configuration on board.
 
 > **Note:** This hardware setup is not required for the KIT_PSE84_AI kit.
 
+While using DVP Camera with PSOC&trade; Edge E84 AI Kit, refer to the [PSOC&trade; Edge E84 AI Kit guide](https://www.infineon.com/assets/row/public/documents/30/44/infineon-kit-pse84-ai-user-guide-usermanual-en.pdf) for instructions on connecting the camera module.
 
 ### Supported camera and display
 
@@ -56,6 +57,8 @@ Ensure the following jumper and pin configuration on board.
 
 - The PSOC&trade; Edge AI Kit also supports -
   - [OV7675 0.3MP DVP Camera module](https://blog.arducam.com/products/camera-breakout-board/0-3mp-ov7675) <br>
+
+  > **Note:** To enable the DVP Camera, update the value of `CAMERA_TYPE` variable in the Makefile of CM55 project from `CAM_USB` to `CAM_DVP`.
 
 > **Note:** For any USB camera other than the ones listed above, ensure that the vendor ID  and product ID of the camera being used are correctly configured in the *usb_camera_task.c* and *usb_camera_task.h* file.
 
@@ -147,7 +150,8 @@ Document title: *CE242145* – *PSOC&trade; Edge MCU: DEEPCRAFT&trade; deploy vi
  Version | Description of change
  ------- | ---------------------
  1.0.0   | New code example
- 2.0.0   | Updated to work with latest DEEPCRAFT flow
+ 2.0.0   | Updated to work with latest DEEPCRAFT&trade;
+ 2.0.1   | README update to include instructions for enabling DVP Camera
 <br>
 
 
