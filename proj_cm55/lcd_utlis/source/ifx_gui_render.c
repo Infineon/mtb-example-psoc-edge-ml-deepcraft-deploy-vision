@@ -7,7 +7,7 @@
 * Related Document : See README.md
 *
 ********************************************************************************
- * (c) 2025, Infineon Technologies AG, or an affiliate of Infineon
+ * (c) 2025-2026, Infineon Technologies AG, or an affiliate of Infineon
  * Technologies AG. All rights reserved.
  * This software, associated documentation and materials ("Software") is
  * owned by Infineon Technologies AG or one of its affiliates ("Infineon")

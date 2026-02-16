@@ -6,7 +6,7 @@
 * Related Document: See README.md
 *
 ********************************************************************************
- * (c) 2025, Infineon Technologies AG, or an affiliate of Infineon
+ * (c) 2025-2026, Infineon Technologies AG, or an affiliate of Infineon
  * Technologies AG. All rights reserved.
  * This software, associated documentation and materials ("Software") is
  * owned by Infineon Technologies AG or one of its affiliates ("Infineon")
@@ -741,6 +741,9 @@ void cm55_ns_gfx_task(void *arg)
     }
     NVIC_EnableIRQ(i2c_controller_irq_cfg.intrSrc);
     Cy_SCB_I2C_Enable(DISPLAY_I2C_CONTROLLER_HW);
+    
+    /* Allow I2C to be stabalized to initialize the display */
+    Cy_SysLib_Delay(200);
 
     /* Initialize Waveshare 4.3-Inch display */
     i2c_result = mtb_disp_waveshare_4p3_init(DISPLAY_I2C_CONTROLLER_HW, &i2c_controller_context);
