@@ -3004,8 +3004,8 @@
                     <Block location="srss[0].clock[0].hfclk[8]" locked="true"/>
                     <Parameters>
                         <Param id="ClkHfCsv" value="false"/>
-                        <Param id="divider" value="8"/>
-                        <Param id="sourceClockNumber" value="0"/>
+                        <Param id="divider" value="1"/>
+                        <Param id="sourceClockNumber" value="4"/>
                     </Parameters>
                 </Personality>
                 <Personality template="hfclk_v2" version="1.0" instance="oZ8lqZyblSI">

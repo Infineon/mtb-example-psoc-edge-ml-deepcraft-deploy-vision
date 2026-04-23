@@ -96,10 +96,11 @@ CY_IGNORE+=$(NN_MODEL_FOLDER)
 ifeq (APP_KIT_PSE84_AI, $(TARGET))
 DEFINES+=USE_KIT_PSE84_AI
 else
-ifeq ($(filter APP_KIT_PSE84_EVAL_EPC2 APP_KIT_PSE84_EVAL_EPC4, $(TARGET)), $(TARGET))
+ifeq ($(filter APP_KIT_PSE84_EVAL_EPC2, $(TARGET)), $(TARGET))
 CY_IGNORE+=$(SEARCH_camera-dvp-ov7675)
 endif
 endif
+
 
 # Add additional defines to the build process (without a leading -D).
 DEFINES+=CY_RETARGET_IO_CONVERT_LF_TO_CRLF CY_RTOS_AWARE MTB_SHARED_MEM ARM_MATH_HELIUM ARM_MATH_DSP ARM_MATH_AUTOVECTORIZE
@@ -109,7 +110,7 @@ DEFINES+=CY_RETARGET_IO_CONVERT_LF_TO_CRLF CY_RTOS_AWARE MTB_SHARED_MEM ARM_MATH
 INCLUDES+=$(NN_MODEL_FOLDER)/mtb_ml_models
 
 # Add additional defines to the build process (without a leading -D).
-ifeq (tflm, $(NN_INFERENCE_ENGINE))
+ifeq ($(NN_INFERENCE_ENGINE),tflm)
 COMPONENTS+=ML_TFLM
 DEFINES+=TF_LITE_STATIC_MEMORY
 endif
@@ -162,8 +163,14 @@ DEFINES+=RPS_DEMO_MODE_ENABLED
 endif
 endif
 
-# Select softfp or hardfp floating point. Default is softfp.
-VFP_SELECT+= hardfp
+# Select softfp or hardfp floating point. Default is hardfp.
+VFP_SELECT+=hardfp
+
+ifeq ($(NN_INFERENCE_ENGINE),tflm)
+    ifeq ($(VFP_SELECT),softfp)
+$(error softfp floating point is not supported for TFLM)
+    endif
+endif
 
 # Additional / custom C compiler flags.
 #
