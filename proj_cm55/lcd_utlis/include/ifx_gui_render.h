@@ -51,8 +51,13 @@ extern "C" {
 /*******************************************************************************
 * Macros
 *******************************************************************************/
-#define DISPLAY_HEIGHT                             (480U)
-#define DISPLAY_WIDTH                              (832U)
+#ifdef USE_KIT_PSE84_HMI
+#define DISPLAY_HEIGHT                      (480U)
+#define DISPLAY_WIDTH                       (512U)
+#else
+#define DISPLAY_HEIGHT                      (480U)
+#define DISPLAY_WIDTH                       (832U)
+#endif
 #define IMAGE_DRAW_PIXEL(LCDBUF, X, Y, R, G, B) \
         draw_image_pixel(LCDBUF, X, Y, R, G, B, DISPLAY_WIDTH, DISPLAY_HEIGHT)
 /* Local text buffer size. */

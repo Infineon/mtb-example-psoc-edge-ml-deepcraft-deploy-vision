@@ -42,7 +42,11 @@
 #include "retarget_io_init.h"
 #include "no_camera_img.h"
 #include "camera_not_supported_img.h"
+#ifdef USE_KIT_PSE84_HMI
+#include "mtb_display_st7701s.h"
+#else
 #include "mtb_disp_dsi_waveshare_4p3.h"
+#endif
 #include "FreeRTOS.h"
 #include "task.h"
 #include "FreeRTOSConfig.h"
@@ -70,8 +74,13 @@
 #define COLOR_DEPTH                         (16U)
 #define BITS_PER_PIXEL                      (8U)
 
+#ifdef USE_KIT_PSE84_HMI
+#define DISPLAY_HEIGHT                      (480U)
+#define DISPLAY_WIDTH                       (512U)
+#else
 #define DISPLAY_HEIGHT                      (480U)
 #define DISPLAY_WIDTH                       (832U)
+#endif
 
 #define DEFAULT_GPU_CMD_BUFFER_SIZE         ((64U) * (1024U))
 #define GPU_TESSELLATION_BUFFER_SIZE        ((DISPLAY_HEIGHT) * 128U)
@@ -93,20 +102,32 @@
 #define DISPLAY_I2C_CONTROLLER_HW           CYBSP_I2C_DISPLAY_CONTROLLER_HW
 #define DISPLAY_I2C_CONTROLLER_IRQ          CYBSP_I2C_DISPLAY_CONTROLLER_IRQ
 #define DISPLAY_I2C_CONTROLLER_config       CYBSP_I2C_DISPLAY_CONTROLLER_config
+#elif defined(USE_KIT_PSE84_HMI)
+/* HMI kit uses CYBSP_I2C_3V3 for display I2C */
+#define DISPLAY_I2C_CONTROLLER_HW           CYBSP_I2C_3V3_HW
+#define DISPLAY_I2C_CONTROLLER_IRQ          CYBSP_I2C_3V3_IRQ
+#define DISPLAY_I2C_CONTROLLER_config       CYBSP_I2C_3V3_config
 #else
 #define DISPLAY_I2C_CONTROLLER_HW           CYBSP_I2C_CONTROLLER_HW
 #define DISPLAY_I2C_CONTROLLER_IRQ          CYBSP_I2C_CONTROLLER_IRQ
 #define DISPLAY_I2C_CONTROLLER_config       CYBSP_I2C_CONTROLLER_config
 #endif
 
-#define NO_CAMERA_IMG_X_POS                 ((MTB_DISP_WAVESHARE_4P3_HOR_RES / 2U) \
+#ifdef USE_KIT_PSE84_HMI
+#define ROTATE_ANGLE                        (90.0f)
+#define ROTATE_MATRIX_X                     (240)
+#define ROTATE_MATRIX_Y                     (240)
+#define FLIP_MATRIX_X                       (1.0f)
+#define FLIP_MATRIX_Y                       (1.0f)
+#endif
+#define NO_CAMERA_IMG_X_POS                 ((DISPLAY_WIDTH / 2U) \
                                              - ((NO_CAMERA_IMG_WIDTH / 2U) + 10))
-#define NO_CAMERA_IMG_Y_POS                 ((MTB_DISP_WAVESHARE_4P3_VER_RES / 2U) \
+#define NO_CAMERA_IMG_Y_POS                 ((DISPLAY_HEIGHT / 2U) \
                                              - (NO_CAMERA_IMG_HEIGHT / 2U))
 
-#define CAMERA_NOT_SUPPORTED_IMG_X_POS      ((MTB_DISP_WAVESHARE_4P3_HOR_RES / 2U) \
+#define CAMERA_NOT_SUPPORTED_IMG_X_POS      ((DISPLAY_WIDTH / 2U) \
                                              - ((CAMERA_NOT_SUPPORTED_IMG_WIDTH / 2U) + 10))
-#define CAMERA_NOT_SUPPORTED_IMG_Y_POS      ((MTB_DISP_WAVESHARE_4P3_VER_RES / 2U) \
+#define CAMERA_NOT_SUPPORTED_IMG_Y_POS      ((DISPLAY_HEIGHT / 2U) \
                                              - (CAMERA_NOT_SUPPORTED_IMG_HEIGHT / 2U))
 
 #ifdef RPS_DEMO_MODE_ENABLED
@@ -115,6 +136,16 @@
 /*******************************************************************************
  * Global Variables
  ****************************************************************************** */
+#ifdef USE_KIT_PSE84_HMI
+mtb_display_st7701s_backlight_config_t st7701s_backlight_cfg =
+{
+    .bl_port    = CYBSP_DISP_BACKLIGHT_PWM_PORT,
+    .bl_pin     = CYBSP_DISP_BACKLIGHT_PWM_PIN,
+    .pwm_hw     = CYBSP_PWM_DISP_BACKLIGHT_HW,
+    .pwm_num    = CYBSP_PWM_DISP_BACKLIGHT_NUM,
+    .pwm_config = &CYBSP_PWM_DISP_BACKLIGHT_config
+};
+#endif
 #ifdef USE_USB_CAM
 /* Last successful USB frame time*/
 static float last_successful_frame_time = 0;
@@ -213,6 +244,29 @@ static vg_lite_matrix_t matrix;
 static int display_offset_x = 0;   
 /* Display Y offset */                            
 static int display_offset_y = 0;                               
+
+#ifdef USE_KIT_PSE84_HMI
+/*******************************************************************************
+* Function Name: rotate_bbox
+********************************************************************************
+* Description: Rotates a rectangle by 90 degrees clockwise around the configured
+*              display center used by the camera transform matrix and returns the
+*              axis-aligned bounds of the rotated rectangle.
+* Parameters:
+*   - xmin, ymin, xmax, ymax: Rectangle bounds to rotate (in/out)
+*
+* Return:
+*   None
+********************************************************************************/
+static void rotate_bbox(uint32_t *xmin, uint32_t *ymin, uint32_t *xmax, uint32_t *ymax)
+{
+    uint32_t x0 = *xmin, x1 = *xmax, y0 = *ymin, y1 = *ymax;
+    *xmin = (2 * ROTATE_MATRIX_X) - y1;
+    *ymin = x0;
+    *xmax = (2 * ROTATE_MATRIX_X) - y0;
+    *ymax = x1;
+}
+#endif
 
 /* Red components: {Green, Black, Red, Blue} */
 static uint8_t color_r[4] = {0, 0, 227, 8}; 
@@ -464,6 +518,11 @@ void update_box_data(vg_lite_buffer_t *render_target, prediction_od_t *predictio
         uint32_t ymin = (uint32_t)(prediction->bbox_int16[jj + 1] * scale_cam_to_disp) + display_offset_y;
         uint32_t xmax = (uint32_t)(prediction->bbox_int16[jj + 2] * scale_cam_to_disp) + display_offset_x;
         uint32_t ymax = (uint32_t)(prediction->bbox_int16[jj + 3] * scale_cam_to_disp) + display_offset_y;
+
+    #ifdef USE_KIT_PSE84_HMI
+        /* Rotate the bounding box */
+        rotate_bbox(&xmin, &ymin, &xmax, &ymax);
+    #endif
 
         // Set foreground color based on class ID
         if (cid == 3) {
@@ -745,12 +804,35 @@ void cm55_ns_gfx_task(void *arg)
     /* Allow I2C to be stabalized to initialize the display */
     Cy_SysLib_Delay(200);
 
+    ifx_lcd_set_Display_size(DISPLAY_WIDTH, DISPLAY_HEIGHT);
+
+#ifdef USE_KIT_PSE84_HMI
+    /* Initialize ST7701S display */
+    printf("Initializing ST7701S display...\r\n");
+
+    result = mtb_display_st7701s_init(GFXSS_GFXSS_MIPIDSI, &st7701s_backlight_cfg);
+    if (CY_RSLT_SUCCESS != result)
+    {
+        printf("ST7701S display init failed with status = 0x%lX\r\n", (unsigned long)result);
+        CY_ASSERT(0);
+    }
+    else
+    {
+        printf("ST7701S display initialized successfully\r\n");
+        
+        /* Set backlight brightness to 100% */
+        uint8_t brightness_level = 100U;
+        mtb_display_st7701s_set_brightness(brightness_level);
+        printf("ST7701S backlight set to 100%%\r\n");
+    }
+#else
     /* Initialize Waveshare 4.3-Inch display */
     i2c_result = mtb_disp_waveshare_4p3_init(DISPLAY_I2C_CONTROLLER_HW, &i2c_controller_context);
     if (CY_SCB_I2C_SUCCESS != i2c_result)
     {
         printf("Waveshare 4.3-Inch display init failed with status = %u\r\n", (unsigned int)i2c_result);
     }
+#endif
 
     /* Initialize VGLite memory parameters */
     vg_module_parameters_t vg_params;
@@ -842,6 +924,17 @@ void cm55_ns_gfx_task(void *arg)
 
     display_offset_x = ((DISPLAY_WIDTH) - scale_cam_to_disp * IMAGE_WIDTH) / 2;
     display_offset_y = (DISPLAY_HEIGHT - scale_cam_to_disp * CAMERA_HEIGHT) / 2;
+
+#ifdef USE_KIT_PSE84_HMI
+    /* Define the rotation matrix (90 degrees) and apply vertical flip */
+    vg_lite_identity(&matrix);
+    vg_lite_translate(ROTATE_MATRIX_X, ROTATE_MATRIX_Y, &matrix);
+    vg_lite_rotate(ROTATE_ANGLE, &matrix);
+    /* Apply vertical flip */
+    vg_lite_scale(FLIP_MATRIX_X, FLIP_MATRIX_Y, &matrix);
+    vg_lite_translate(-ROTATE_MATRIX_X, -ROTATE_MATRIX_Y, &matrix);
+    vg_lite_scale(scale_cam_to_disp, scale_cam_to_disp, &matrix);
+#endif
 
     Cy_GFXSS_Set_FrameBuffer(base, (uint32_t *)render_target->address, &gfx_context);
     vg_lite_flush();

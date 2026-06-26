@@ -95,10 +95,19 @@ CY_IGNORE+=$(NN_MODEL_FOLDER)
 # Check which kit is being used and apply the corresponding configurations
 ifeq (APP_KIT_PSE84_AI, $(TARGET))
 DEFINES+=USE_KIT_PSE84_AI
-else
+CY_IGNORE+=$(SEARCH_display-tft-st7701s)
+endif
+
+# HMI kit uses ST7701S display (512x480) with USB camera
+ifeq (APP_KIT_PSE84_HMI, $(TARGET))
+DEFINES+=USE_KIT_PSE84_HMI
+CY_IGNORE+=$(SEARCH_camera-dvp-ov7675)
+CY_IGNORE += $(SEARCH_display-dsi-waveshare-4-3-lcd)
+endif
+
 ifeq ($(filter APP_KIT_PSE84_EVAL_EPC2, $(TARGET)), $(TARGET))
 CY_IGNORE+=$(SEARCH_camera-dvp-ov7675)
-endif
+CY_IGNORE+=$(SEARCH_display-tft-st7701s)
 endif
 
 

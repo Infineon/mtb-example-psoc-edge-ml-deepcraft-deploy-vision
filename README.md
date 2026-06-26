@@ -3,10 +3,11 @@
 This code example demonstrates a real-time hand gesture detection that uses a USB camera to capture live video and a DEEPCRAFT&trade; Studio object detection model to detect hand gestures (rock, paper, or scissors) in the video feed using ModusToolbox&trade;. The detected gestures are highlighted by drawing a bounding box around the gesture and displaying the corresponding text (rock, paper, or scissors) in a text box on the display and on a terminal.
 
 This code example has a three-project structure: CM33 secure, CM33 non-secure, and CM55 projects. All three projects are programmed to the external QSPI flash and executed in Execute in Place (XIP) mode. Extended boot launches the CM33 secure project from a fixed location in the external flash, which then configures the protection settings and launches the CM33 non-secure application. Additionally, CM33 non-secure application enables CM55 CPU and launches the CM55 application.
+> **Note:** On the KIT_PSE84_HMI, all three projects are programmed to the external OSPI flash instead of QSPI.
 
 [View this README on GitHub.](https://github.com/Infineon/mtb-example-psoc-edge-ml-deepcraft-deploy-vision)
 
-[Provide feedback on this code example.](https://yourvoice.infineon.com/jfe/form/SV_1NTns53sK2yiljn?Q_EED=eyJVbmlxdWUgRG9jIElkIjoiQ0UyNDIxNDUiLCJTcGVjIE51bWJlciI6IjAwMi00MjE0NSIsIkRvYyBUaXRsZSI6IlBTT0MmdHJhZGU7IEVkZ2UgTUNVOiBNYWNoaW5lIGxlYXJuaW5nIOKAkyBERUVQQ1JBRlQmdHJhZGU7IGRlcGxveSB2aXNpb24iLCJyaWQiOiJzYW5kZWVwLmFrQGluZmluZW9uLmNvbSIsIkRvYyB2ZXJzaW9uIjoiMi4yLjAiLCJEb2MgTGFuZ3VhZ2UiOiJFbmdsaXNoIiwiRG9jIERpdmlzaW9uIjoiTUNEIiwiRG9jIEJVIjoiSUNXIiwiRG9jIEZhbWlseSI6IlBTT0MifQ==)
+[Provide feedback on this code example.](https://yourvoice.infineon.com/jfe/form/SV_1NTns53sK2yiljn?Q_EED=eyJVbmlxdWUgRG9jIElkIjoiQ0UyNDIxNDUiLCJTcGVjIE51bWJlciI6IjAwMi00MjE0NSIsIkRvYyBUaXRsZSI6IlBTT0MmdHJhZGU7IEVkZ2UgTUNVOiBNYWNoaW5lIGxlYXJuaW5nIOKAkyBERUVQQ1JBRlQmdHJhZGU7IGRlcGxveSB2aXNpb24iLCJyaWQiOiJzYW5kZWVwLmFrQGluZmluZW9uLmNvbSIsIkRvYyB2ZXJzaW9uIjoiMi4zLjAiLCJEb2MgTGFuZ3VhZ2UiOiJFbmdsaXNoIiwiRG9jIERpdmlzaW9uIjoiTUNEIiwiRG9jIEJVIjoiSUNXIiwiRG9jIEZhbWlseSI6IlBTT0MifQ==)
 
 See the [Design and implementation](docs/design_and_implementation.md) for the functional description of this code example.
 
@@ -34,6 +35,7 @@ See the [Design and implementation](docs/design_and_implementation.md) for the f
 
 - [PSOC&trade; Edge E84 Evaluation Kit](https://www.infineon.com/KIT_PSE84_EVAL) (`KIT_PSE84_EVAL_EPC2`) – Default value of `TARGET`
 - [PSOC&trade; Edge E84 AI Kit](https://www.infineon.com/KIT_PSE84_AI) (`KIT_PSE84_AI`)
+- [PSOC&trade; Edge E84 HMI Kit](https://www.infineon.com/KIT_PSE84_HMI) (`KIT_PSE84_HMI`)
 
 
 ## Hardware setup
@@ -79,6 +81,13 @@ While using DVP Camera with PSOC&trade; Edge E84 AI Kit, refer to the [PSOC&trad
 
   ![](images/display-kit-connection.png)
 
+- **ST7701S 4-inch MIPI DSI 512x480 pixel display (RK040HF001):** This display is by default
+  shipped with PSOC&trade; Edge E84 HMI Kit.
+
+   **Figure 2. 4-inch MIPI DSI 512x480 pixel display**
+
+   ![](images/hmi_kit_image.png)
+
 
 ## Software setup
 
@@ -90,7 +99,7 @@ Install the [ModusToolbox&trade; Machine Learning Pack](https://softwaretools.in
 
 This example requires no additional software or tools.
 
-> **Note:** This code example currently does not work with the custom BSP name for the `KIT_PSE84_EVAL_EPC2` and `KIT_PSE84_AI` kits. If you want to change the BSP name to a non-default value, ensure to update the custom BSP name in *Makefile* under the relevant section. The build fails if you do not update the custom BSP name.
+> **Note:** This code example currently does not work with the custom BSP name for the `KIT_PSE84_EVAL_EPC2`, `KIT_PSE84_AI` and `KIT_PSE84_HMI` kits. If you want to change the BSP name to a non-default value, ensure to update the custom BSP name in *Makefile* under the relevant section. The build fails if you do not update the custom BSP name.
 
 
 ## Operation
@@ -163,6 +172,7 @@ Document title: *CE242145* – *PSOC&trade; Edge MCU: DEEPCRAFT&trade; deploy vi
  2.0.1   | README update to include instructions for enabling DVP Camera
  2.1.0   | Updated design files to fix ModusToolbox&trade; v3.7 build warnings
  2.2.0   | Enabled 24 MHz EXT_CLK to reduce USB camera transaction errors
+ 2.3.0   | Added support for KIT_PSE84_HMI
 <br>
 
 
