@@ -44,6 +44,7 @@
 extern "C" {
 #endif
 
+#include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <math.h>
@@ -51,24 +52,26 @@ extern "C" {
 /*******************************************************************************
 * Macros
 *******************************************************************************/
-#define NUM_CLASSES             3
 #define MAX_CLASS_LEN           10
 #define MAX_PREDICTIONS         5
-/* Default USB camera input dimensions. */ 
-#define CAMERA_WIDTH            320     
+#define MODEL_INPUT_MAX_WIDTH   320
+#define MODEL_INPUT_MAX_HEIGHT  320
+#define MODEL_INPUT_MAX_BYTES   (MODEL_INPUT_MAX_WIDTH * MODEL_INPUT_MAX_HEIGHT * 3)
+/* Default USB camera input dimensions. */
+#define CAMERA_WIDTH            320
 #define CAMERA_HEIGHT           240
 /* Model input dimensions, hard coded for now to help on LCD graphics maintain an image buffer of model size. */
-#define IMAGE_WIDTH             320     
-#define IMAGE_HEIGHT            320
+#define IMAGE_WIDTH             224
+#define IMAGE_HEIGHT            224
 /* If USB webcam stream is sharding, skip some frames (inference every FRAMES_TO_SKIP frames) */
-#define FRAMES_TO_SKIP          2        
+#define FRAMES_TO_SKIP          2
 #define FRAMES_TO_SKIP_LOGITECH 4
 
-/* Object Detection Configuration. */ 
-/* Scaling factor */      
+/* Object Detection Configuration. */
+/* Scaling factor */
 #define HALF(x)                 ((x) * 0.5f)
-/* Rounding factor */    
-#define RND_F2I_FACTOR          0.5f     
+/* Rounding factor */
+#define RND_F2I_FACTOR          0.5f
 
 #ifndef max
     #define max(a, b)   ((a) > (b) ? (a) : (b))
@@ -78,7 +81,7 @@ extern "C" {
 /******************************************************************************
  * Global Variables - struct
  *****************************************************************************/
-/* Final output variables */ 
+/* Final output variables */
 typedef struct {
     int32_t     count;
     int16_t     bbox_int16[MAX_PREDICTIONS * 4];
@@ -87,10 +90,38 @@ typedef struct {
     char        class_string[MAX_PREDICTIONS][MAX_CLASS_LEN];
 } prediction_od_t;
 
+typedef enum {
+    MODEL_OUTPUT_SCHEMA_NEW = 0,
+    MODEL_OUTPUT_SCHEMA_LEGACY = 1
+} model_output_schema_t;
+
+typedef enum {
+    MODEL_PREPROCESS_LETTERBOX = 0,
+    MODEL_PREPROCESS_CROP = 1
+} model_preprocess_mode_t;
+
+typedef enum {
+    BBOX_MAP_LETTERBOX_TO_CAMERA = 0,
+    BBOX_MAP_DIRECT_MODEL = 1
+} bbox_mapping_mode_t;
+
+typedef struct {
+    uint16_t input_width;
+    uint16_t input_height;
+    uint16_t max_predictions;
+    uint16_t output_columns;
+    uint16_t num_classes;
+    bool has_detection_flag;
+    model_output_schema_t output_schema;
+    model_preprocess_mode_t preprocess_mode;
+    bbox_mapping_mode_t bbox_mapping_mode;
+} model_runtime_profile_t;
+
 /*******************************************************************************
 * Function Prototypes
 *******************************************************************************/
 int8_t get_best_class(const float *cls, size_t size, float *max_cls_val);
+const model_runtime_profile_t *get_model_runtime_profile(void);
 
 
 #if defined(__cplusplus)

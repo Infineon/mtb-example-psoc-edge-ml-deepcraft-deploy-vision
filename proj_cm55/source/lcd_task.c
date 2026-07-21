@@ -39,6 +39,7 @@
 * Header File
 *******************************************************************************/
 #include "cybsp.h"
+#include <string.h>
 #include "retarget_io_init.h"
 #include "no_camera_img.h"
 #include "camera_not_supported_img.h"
@@ -149,37 +150,37 @@ mtb_display_st7701s_backlight_config_t st7701s_backlight_cfg =
 #ifdef USE_USB_CAM
 /* Last successful USB frame time*/
 static float last_successful_frame_time = 0;
-/* USB recovery attempt counter */                     
-static int recovery_attempts = 0;                               
+/* USB recovery attempt counter */
+static int recovery_attempts = 0;
 #endif
 /* USB semaphore for synchronization */
-extern cy_semaphore_t usb_semaphore; 
-/* Object detection prediction */                          
-extern prediction_od_t prediction;  
-/* Inference time for model */                            
+extern cy_semaphore_t usb_semaphore;
+/* Object detection prediction */
+extern prediction_od_t prediction;
+/* Inference time for model */
 extern volatile float inference_time;
-/* Model semaphore for synchronization */                           
-extern cy_semaphore_t model_semaphore;   
-/* Device connected */                       
+/* Model semaphore for synchronization */
+extern cy_semaphore_t model_semaphore;
+/* Device connected */
 extern uint8_t _device_connected;
-/* Start time */                               
-volatile float time_start1;   
-/* Graphics context structure */                                  
-cy_stc_gfx_context_t gfx_context; 
-/* Render target buffer*/                              
-vg_lite_buffer_t *render_target;   
-/* USB YUV frame buffers */                              
-vg_lite_buffer_t usb_yuv_frames[NUM_IMAGE_BUFFERS]; 
-/* BGR565 buffer */            
-vg_lite_buffer_t bgr565; 
-/* Double display frame buffers */                                       
-vg_lite_buffer_t display_buffer[3];  
-/* Scale factor from camera to display */                           
-float scale_cam_to_disp;                                           
+/* Start time */
+volatile float time_start1;
+/* Graphics context structure */
+cy_stc_gfx_context_t gfx_context;
+/* Render target buffer*/
+vg_lite_buffer_t *render_target;
+/* USB YUV frame buffers */
+vg_lite_buffer_t usb_yuv_frames[NUM_IMAGE_BUFFERS];
+/* BGR565 buffer */
+vg_lite_buffer_t bgr565;
+/* Double display frame buffers */
+vg_lite_buffer_t display_buffer[3];
+/* Scale factor from camera to display */
+float scale_cam_to_disp;
 
 #ifdef USE_DVP_CAM
 /* Inference task moved inside GFX task for DVP cam */
-void cm55_inference_task ( void *arg );                         
+void cm55_inference_task ( void *arg );
 static cy_thread_t inference_thread;
 extern vg_lite_buffer_t dvp_bgr565_frames[NUM_IMAGE_BUFFERS];
 extern bool active_frame;
@@ -188,15 +189,15 @@ extern bool active_frame;
 CY_SECTION(".cy_socmem_data")
 /* BGR888 integer buffer */
 __attribute__((aligned(64)))
-uint8_t bgr888_uint8[(IMAGE_HEIGHT) * (IMAGE_WIDTH) * 3] = {0};   
+uint8_t bgr888_uint8[MODEL_INPUT_MAX_BYTES] = {0};
 
 CY_SECTION(".cy_xip") __attribute__((used))
 /* Contiguous memory for VGLite heap */
-uint8_t contiguous_mem[VGLITE_HEAP_SIZE]; 
-/* VGLite heap base address */                      
-volatile void *vglite_heap_base = &contiguous_mem; 
-/* framebuffer pending flag */             
-volatile bool fb_pending = false;   
+uint8_t contiguous_mem[VGLITE_HEAP_SIZE];
+/* VGLite heap base address */
+volatile void *vglite_heap_base = &contiguous_mem;
+/* framebuffer pending flag */
+volatile bool fb_pending = false;
 
 /*******************************************************************************
  * Global Variables - Shared memory variable
@@ -209,41 +210,41 @@ oob_shared_data_t oob_shared_data_ns;
  * Global Variables - I2C Controller Configuration
  ****************************************************************************** */
  /* I2C controller context */
-cy_stc_scb_i2c_context_t i2c_controller_context;                
+cy_stc_scb_i2c_context_t i2c_controller_context;
 
 /*******************************************************************************
  * Global Variables - Interrupt Configurations
  *******************************************************************************/
  /* DC Interrupt Configuration */
-cy_stc_sysint_t dc_irq_cfg =                                   
+cy_stc_sysint_t dc_irq_cfg =
 {
-    .intrSrc      = gfxss_interrupt_dc_IRQn,                   
-    .intrPriority = DC_INT_PRIORITY                            
+    .intrSrc      = gfxss_interrupt_dc_IRQn,
+    .intrPriority = DC_INT_PRIORITY
 };
 /* GPU Interrupt Configuration*/
-cy_stc_sysint_t gpu_irq_cfg =                                  
+cy_stc_sysint_t gpu_irq_cfg =
 {
-    .intrSrc      = gfxss_interrupt_gpu_IRQn,                  
-    .intrPriority = GPU_INT_PRIORITY                           
+    .intrSrc      = gfxss_interrupt_gpu_IRQn,
+    .intrPriority = GPU_INT_PRIORITY
 };
 /* I2C Controller Interrupt Configuration */
-cy_stc_sysint_t i2c_controller_irq_cfg =                       
+cy_stc_sysint_t i2c_controller_irq_cfg =
 {
-    .intrSrc      = DISPLAY_I2C_CONTROLLER_IRQ,                  
-    .intrPriority = I2C_CONTROLLER_IRQ_PRIORITY                
+    .intrSrc      = DISPLAY_I2C_CONTROLLER_IRQ,
+    .intrPriority = I2C_CONTROLLER_IRQ_PRIORITY
 };
 
 /*******************************************************************************
  * Local Variables
  *******************************************************************************/
  /* Graphics subsystem base address */
-static GFXSS_Type *base = (GFXSS_Type *)GFXSS;     
-/* VGLite transformation matrix */            
+static GFXSS_Type *base = (GFXSS_Type *)GFXSS;
+/* VGLite transformation matrix */
 static vg_lite_matrix_t matrix;
-/* Display X offset */                                
-static int display_offset_x = 0;   
-/* Display Y offset */                            
-static int display_offset_y = 0;                               
+/* Display X offset */
+static int display_offset_x = 0;
+/* Display Y offset */
+static int display_offset_y = 0;
 
 #ifdef USE_KIT_PSE84_HMI
 /*******************************************************************************
@@ -274,6 +275,63 @@ static uint8_t color_r[4] = {0, 0, 227, 8};
 static uint8_t color_g[4] = {255, 0, 66, 24};  
 /* Blue components: {Green, Black, Red, Blue} */                
 static uint8_t color_b[4] = {0, 0, 52, 168};                   
+
+CY_SECTION_ITCM_BEGIN
+/*******************************************************************************
+* Function Name: letterbox_bgr565_to_rgb888
+********************************************************************************
+* Description: Letterbox resize of a BGR565 image to an RGB888 output.
+*              Scales the source image to fit within dst_w x dst_h while
+*              maintaining aspect ratio. Unfilled regions are zero (black).
+*              Uses nearest-neighbor sampling.
+*
+* Parameters:
+*   src_bgr565 - pointer to source BGR565 image data
+*   src_w, src_h - source dimensions
+*   dst_rgb888 - pointer to destination RGB888 buffer (must be pre-zeroed)
+*   dst_w, dst_h - destination dimensions
+*   out_pad_x, out_pad_y - if non-NULL, receives the padding offsets
+*   out_scale - if non-NULL, receives the scale factor used
+*
+* Return: None
+********************************************************************************/
+static void letterbox_bgr565_to_rgb888(const uint8_t *src_bgr565, int src_w, int src_h,
+                                        uint8_t *dst_rgb888, int dst_w, int dst_h,
+                                        int *out_pad_x, int *out_pad_y, float *out_scale)
+{
+    float scale_x = (float)dst_w / (float)src_w;
+    float scale_y = (float)dst_h / (float)src_h;
+    float scale = (scale_x < scale_y) ? scale_x : scale_y;
+
+    int new_w = (int)(src_w * scale);
+    int new_h = (int)(src_h * scale);
+    int pad_x = (dst_w - new_w) / 2;
+    int pad_y = (dst_h - new_h) / 2;
+
+    if (out_pad_x) *out_pad_x = pad_x;
+    if (out_pad_y) *out_pad_y = pad_y;
+    if (out_scale)  *out_scale  = scale;
+
+    const uint16_t *src16 = (const uint16_t *)src_bgr565;
+
+    for (int dy = 0; dy < new_h; dy++)
+    {
+        int sy = dy * src_h / new_h;
+        const uint16_t *src_row = &src16[sy * src_w];
+        uint8_t *dst = &dst_rgb888[((dy + pad_y) * dst_w + pad_x) * 3];
+
+        for (int dx = 0; dx < new_w; dx++)
+        {
+            int sx = dx * src_w / new_w;
+            uint16_t pixel = src_row[sx];
+
+            *dst++ = (pixel >> 8) & 0xF8;   /* red */
+            *dst++ = (pixel >> 3) & 0xFC;   /* green */
+            *dst++ = (pixel << 3) & 0xF8;   /* blue */
+        }
+    }
+}
+CY_SECTION_ITCM_END
 
 CY_SECTION_ITCM_BEGIN
 /*******************************************************************************
@@ -365,6 +423,9 @@ uint8_t * draw(void)
 {
     vg_lite_error_t error = VG_LITE_SUCCESS;
     volatile uint32_t time_draw_start = ifx_time_get_ms_f();
+    const model_runtime_profile_t *model_profile = get_model_runtime_profile();
+    int model_input_w = (int)model_profile->input_width;
+    int model_input_h = (int)model_profile->input_height;
 #ifdef USE_USB_CAM
     extern uint8_t last_buffer;
     extern video_buffer_t _image_buff[];
@@ -381,7 +442,7 @@ uint8_t * draw(void)
         cy_rtos_delay_milliseconds(1);
     }
 
-    /* Reset all other buffers to available for input from camera */ 
+    /* Reset all other buffers to available for input from camera */
     for (int32_t ii = 1; ii < NUM_IMAGE_BUFFERS; ii++)
         _image_buff[(work_buffer + ii) % NUM_IMAGE_BUFFERS].buff_ready = 0;
 #endif
@@ -434,9 +495,30 @@ uint8_t * draw(void)
     _image_buff[work_buffer].num_bytes = 0;
     _image_buff[work_buffer].buff_ready = 0;
 #endif
-    /* Convert 320x240 BGR565 image into 256x240 BGR888 - 128 */
+    if ((model_input_w <= 0) || (model_input_h <= 0) ||
+        (model_input_w > MODEL_INPUT_MAX_WIDTH) || (model_input_h > MODEL_INPUT_MAX_HEIGHT)) {
+        printf("Invalid model input dimensions in draw(): %dx%d\r\n", model_input_w, model_input_h);
+        CY_ASSERT(0);
+    }
+
+    /* Convert BGR565 to model input RGB888 according to runtime compatibility mode. */
     volatile uint32_t time_draw_5 = ifx_time_get_ms_f();
-    ifx_image_conv_RGB565_to_RGB888_i8(bgr565.memory, CAMERA_WIDTH, CAMERA_HEIGHT, bgr888_uint8, IMAGE_WIDTH, IMAGE_HEIGHT);
+    if (model_profile->preprocess_mode == MODEL_PREPROCESS_CROP)
+    {
+        ifx_image_conv_RGB565_to_RGB888_i8(bgr565.memory,
+                                           CAMERA_WIDTH,
+                                           CAMERA_HEIGHT,
+                                           bgr888_uint8,
+                                           model_input_w,
+                                           model_input_h);
+    }
+    else
+    {
+        memset(bgr888_uint8, 0, (size_t)model_input_w * (size_t)model_input_h * 3U);
+        letterbox_bgr565_to_rgb888(bgr565.memory, CAMERA_WIDTH, CAMERA_HEIGHT,
+                                   bgr888_uint8, model_input_w, model_input_h,
+                                   NULL, NULL, NULL);
+    }
 
     volatile uint32_t time_draw_end = ifx_time_get_ms_f();
     // performance measures: time
@@ -513,11 +595,39 @@ void update_box_data(vg_lite_buffer_t *render_target, prediction_od_t *predictio
         int32_t id = prediction->class_id[i];
         int32_t cid = (id >= 0) ? (id % 3) + 1 : 0;
 
+        int32_t cam_xmin = prediction->bbox_int16[jj];
+        int32_t cam_ymin = prediction->bbox_int16[jj + 1];
+        int32_t cam_xmax = prediction->bbox_int16[jj + 2];
+        int32_t cam_ymax = prediction->bbox_int16[jj + 3];
+
+        if (cam_xmin < 0) cam_xmin = 0;
+        if (cam_ymin < 0) cam_ymin = 0;
+        if (cam_xmax < 0) cam_xmax = 0;
+        if (cam_ymax < 0) cam_ymax = 0;
+
+        if (cam_xmin > CAMERA_WIDTH - 1) cam_xmin = CAMERA_WIDTH - 1;
+        if (cam_ymin > CAMERA_HEIGHT - 1) cam_ymin = CAMERA_HEIGHT - 1;
+        if (cam_xmax > CAMERA_WIDTH - 1) cam_xmax = CAMERA_WIDTH - 1;
+        if (cam_ymax > CAMERA_HEIGHT - 1) cam_ymax = CAMERA_HEIGHT - 1;
+
+        if (cam_xmax < cam_xmin)
+        {
+            int32_t t = cam_xmin;
+            cam_xmin = cam_xmax;
+            cam_xmax = t;
+        }
+        if (cam_ymax < cam_ymin)
+        {
+            int32_t t = cam_ymin;
+            cam_ymin = cam_ymax;
+            cam_ymax = t;
+        }
+
         /* Scale and offset bounding box coordinates */
-        uint32_t xmin = (uint32_t)(prediction->bbox_int16[jj] * scale_cam_to_disp) + display_offset_x;
-        uint32_t ymin = (uint32_t)(prediction->bbox_int16[jj + 1] * scale_cam_to_disp) + display_offset_y;
-        uint32_t xmax = (uint32_t)(prediction->bbox_int16[jj + 2] * scale_cam_to_disp) + display_offset_x;
-        uint32_t ymax = (uint32_t)(prediction->bbox_int16[jj + 3] * scale_cam_to_disp) + display_offset_y;
+        uint32_t xmin = (uint32_t)(cam_xmin * scale_cam_to_disp) + display_offset_x;
+        uint32_t ymin = (uint32_t)(cam_ymin * scale_cam_to_disp) + display_offset_y;
+        uint32_t xmax = (uint32_t)(cam_xmax * scale_cam_to_disp) + display_offset_x;
+        uint32_t ymax = (uint32_t)(cam_ymax * scale_cam_to_disp) + display_offset_y;
 
     #ifdef USE_KIT_PSE84_HMI
         /* Rotate the bounding box */
@@ -922,7 +1032,7 @@ void cm55_ns_gfx_task(void *arg)
     float translate_y = (DISPLAY_HEIGHT / scale_cam_to_disp - CAMERA_HEIGHT) * 0.5f;
     vg_lite_translate(translate_x, translate_y, &matrix);
 
-    display_offset_x = ((DISPLAY_WIDTH) - scale_cam_to_disp * IMAGE_WIDTH) / 2;
+    display_offset_x = ((DISPLAY_WIDTH) - scale_cam_to_disp * CAMERA_WIDTH) / 2;
     display_offset_y = (DISPLAY_HEIGHT - scale_cam_to_disp * CAMERA_HEIGHT) / 2;
 
 #ifdef USE_KIT_PSE84_HMI
