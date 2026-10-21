@@ -105,14 +105,14 @@ CY_IGNORE+=$(SEARCH_camera-dvp-ov7675)
 CY_IGNORE += $(SEARCH_display-dsi-waveshare-4-3-lcd)
 endif
 
-ifeq ($(filter APP_KIT_PSE84_EVAL_EPC2, $(TARGET)), $(TARGET))
+ifeq ($(filter APP_KIT_PSE84_EVAL_EPC2 APP_KIT_PSE846_EVAL_EPC2, $(TARGET)), $(TARGET))
 CY_IGNORE+=$(SEARCH_camera-dvp-ov7675)
 CY_IGNORE+=$(SEARCH_display-tft-st7701s)
 endif
 
 
 # Add additional defines to the build process (without a leading -D).
-DEFINES+=CY_RETARGET_IO_CONVERT_LF_TO_CRLF CY_RTOS_AWARE MTB_SHARED_MEM ARM_MATH_HELIUM ARM_MATH_DSP ARM_MATH_AUTOVECTORIZE
+DEFINES+=CY_RETARGET_IO_CONVERT_LF_TO_CRLF CY_RTOS_AWARE MTB_SHARED_MEM ARM_MATH_HELIUM ARM_MATH_DSP ARM_MATH_AUTOVECTORIZE _BAREMETAL=0
 
 # Like SOURCES, but for include directories. Value should be paths to
 # directories (without a leading -I).
